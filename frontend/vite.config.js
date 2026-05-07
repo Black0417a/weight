@@ -10,9 +10,10 @@ export default defineConfig({
       'www.rxaoknjn0.nyat.app'
     ],
     proxy: {
-      '/api': {
+      '/weight/api': {
         target: 'http://127.0.0.1:6000',
-        changeOrigin: true
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/weight\/api/, '/api')
       }
     }
   },
