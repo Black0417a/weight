@@ -1,0 +1,52 @@
+@media screen and (max-width: 1199px) and (min-width: 768px) {
+  :root {
+    --max-width: 100%;
+    --sidebar-width: 200px;
+  }
+
+  .page-container {
+    padding: var(--spacing-md);
+  }
+
+  .card {
+    padding: var(--spacing-md);
+  }
+}
+
+@media screen and (max-width: 767px) {
+  :root {
+    --max-width: 100%;
+    --sidebar-width: 0px;
+    --header-height: 56px;
+  }
+
+  .page-container {
+    padding: var(--spacing-sm);
+  }
+
+  .page-title {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .card {
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+  }
+
+  .btn {
+    padding: 8px 20px;
+    font-size: var(--font-size-xs);
+  }
+
+  .input-field {
+    padding: 10px 14px;
+    font-size: var(--font-size-sm);
+  }
+
+  .modal-content {
+    padding: var(--spacing-lg);
+    width: 95%;
+    border-radius: var(--radius-lg);
+  }
+}

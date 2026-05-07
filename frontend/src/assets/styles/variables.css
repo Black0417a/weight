@@ -1,0 +1,54 @@
+:root {
+  --color-primary: #ff6b6b;
+  --color-primary-light: #ff8e8e;
+  --color-primary-dark: #e55656;
+  --color-secondary: #ffa94d;
+  --color-secondary-light: #ffbe7a;
+  --color-accent: #ffd43b;
+  --color-success: #69db7c;
+  --color-warning: #ffa94d;
+  --color-danger: #ff6b6b;
+  --color-info: #74c0fc;
+
+  --bg-primary: #fff5f5;
+  --bg-secondary: #ffe8e8;
+  --bg-white: #ffffff;
+  --bg-card: #ffffff;
+  --bg-hover: #fff0f0;
+
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-light: #999999;
+  --text-white: #ffffff;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 2px 8px rgba(255, 107, 107, 0.08);
+  --shadow-md: 0 4px 16px rgba(255, 107, 107, 0.12);
+  --shadow-lg: 0 8px 32px rgba(255, 107, 107, 0.15);
+
+  --font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --font-size-2xl: 28px;
+  --font-size-3xl: 36px;
+
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+
+  --max-width: 1200px;
+  --sidebar-width: 240px;
+  --header-height: 64px;
+  --header-height-mobile: 56px;
+}
