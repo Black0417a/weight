@@ -58,8 +58,3 @@ def create_app():
             scheduler.start()
 
     return app
-
-
-if __name__ == '__main__':
-    app = create_app()
-    app.run(debug=True, port=6000)

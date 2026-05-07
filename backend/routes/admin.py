@@ -28,6 +28,9 @@ def admin_required():
 
 @admin_bp.route('/auth/register', methods=['POST'])
 def admin_register():
+    if Admin.query.count() > 0:
+        return jsonify({'error': '管理员注册已关闭，请联系已有管理员添加账户'}), 403
+
     data = request.get_json()
     if not data or not data.get('username') or not data.get('password'):
         return jsonify({'error': '用户名和密码不能为空'}), 400
@@ -40,18 +43,14 @@ def admin_register():
     if len(password) < 6:
         return jsonify({'error': '密码至少6个字符'}), 400
 
-    if Admin.query.filter_by(username=username).first():
-        return jsonify({'error': '用户名已存在'}), 400
-
     password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-    is_first = Admin.query.count() == 0
-    admin = Admin(username=username, password_hash=password_hash, is_active=is_first)
+    admin = Admin(username=username, password_hash=password_hash, is_active=True)
     db.session.add(admin)
     db.session.commit()
 
     return jsonify({
-        'message': '管理员注册成功' + ('，已自动激活' if is_first else '，等待超级管理员激活'),
+        'message': '首个管理员注册成功，已自动激活',
         'admin': admin.to_dict()
     }), 201
 
@@ -80,6 +79,58 @@ def admin_login():
     )
 
     return jsonify({'token': access_token, 'admin': admin.to_dict()}), 200
+
+
+@admin_bp.route('/admins', methods=['GET'])
+@admin_required()
+def list_admins():
+    admins = Admin.query.order_by(Admin.created_at.desc()).all()
+    return jsonify([a.to_dict() for a in admins]), 200
+
+
+@admin_bp.route('/admins', methods=['POST'])
+@admin_required()
+def create_admin():
+    data = request.get_json()
+    if not data or not data.get('username') or not data.get('password'):
+        return jsonify({'error': '用户名和密码不能为空'}), 400
+
+    username = data['username'].strip()
+    password = data['password']
+
+    if len(username) < 3:
+        return jsonify({'error': '用户名至少3个字符'}), 400
+    if len(password) < 6:
+        return jsonify({'error': '密码至少6个字符'}), 400
+
+    if Admin.query.filter_by(username=username).first():
+        return jsonify({'error': '用户名已存在'}), 400
+
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    admin = Admin(username=username, password_hash=password_hash, is_active=True)
+    db.session.add(admin)
+    db.session.commit()
+
+    return jsonify({'message': '管理员创建成功', 'admin': admin.to_dict()}), 201
+
+
+@admin_bp.route('/admins/<int:admin_id>', methods=['DELETE'])
+@admin_required()
+def delete_admin(admin_id):
+    current_admin_id = int(get_jwt_identity())
+    if admin_id == current_admin_id:
+        return jsonify({'error': '不能删除自己'}), 400
+
+    admin = Admin.query.get(admin_id)
+    if not admin:
+        return jsonify({'error': '管理员不存在'}), 404
+
+    if Admin.query.filter_by(is_active=True).count() <= 1:
+        return jsonify({'error': '不能删除最后一个管理员'}), 400
+
+    db.session.delete(admin)
+    db.session.commit()
+    return jsonify({'message': '管理员已删除'}), 200
 
 
 @admin_bp.route('/users', methods=['GET'])
