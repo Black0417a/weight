@@ -67,7 +67,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import axios from 'axios'
+import request from '@/utils/request'
 
 const today = new Date()
 const todayStr = today.toISOString().split('T')[0]
@@ -220,21 +220,18 @@ const handleQuickRecord = async () => {
 
 const fetchData = async () => {
   try {
-    const token = localStorage.getItem('user_token')
-    const headers = { Authorization: `Bearer ${token}` }
-
     const startDate = new Date(viewYear.value, viewMonth.value - 1, 1)
     const endDate = new Date(viewYear.value, viewMonth.value + 2, 0)
     const start = startDate.toISOString().split('T')[0]
     const end = endDate.toISOString().split('T')[0]
 
     const [res, goalRes] = await Promise.all([
-      axios.get('/api/weights', { params: { start_date: start, end_date: end }, headers }),
-      axios.get('/api/goal', { headers })
+      request.get('/weights', { params: { start_date: start, end_date: end } }),
+      request.get('/goal')
     ])
-    records.value = res.data
-    if (goalRes.data.target_weight) {
-      goal.value = goalRes.data
+    records.value = res
+    if (goalRes.target_weight) {
+      goal.value = goalRes
     }
   } catch (err) {
     console.error(err)

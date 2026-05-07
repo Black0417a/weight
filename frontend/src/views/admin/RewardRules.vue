@@ -130,7 +130,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import request from '@/utils/request'
 
 const rules = ref([])
 const allUsers = ref([])
@@ -171,22 +171,17 @@ const formatTargetUsers = (target) => {
 
 const fetchUsers = async () => {
   try {
-    const token = localStorage.getItem('admin_token')
-    const res = await axios.get('/api/admin/users', {
-      params: { per_page: 1000 },
-      headers: { Authorization: `Bearer ${token}` }
+    const res = await request.get('/admin/users', {
+      params: { per_page: 1000 }
     })
-    allUsers.value = res.data.users
+    allUsers.value = res.users
   } catch (err) { console.error(err) }
 }
 
 const fetchRules = async () => {
   try {
-    const token = localStorage.getItem('admin_token')
-    const res = await axios.get('/api/admin/reward-rules', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    rules.value = res.data
+    const res = await request.get('/admin/reward-rules')
+    rules.value = res
   } catch (err) { console.error(err) }
 }
 
@@ -246,9 +241,6 @@ const handleSave = async () => {
   if (!form.value.name) { errorMsg.value = '请输入规则名称'; return }
   saving.value = true
   try {
-    const token = localStorage.getItem('admin_token')
-    const headers = { Authorization: `Bearer ${token}` }
-
     let targetUsers = 'all'
     if (!allSelected.value) {
       targetUsers = selectedUserIds.value.map(String)
@@ -269,9 +261,9 @@ const handleSave = async () => {
     }
 
     if (isEditing.value) {
-      await axios.put(`/api/admin/reward-rules/${editingId.value}`, payload, { headers })
+      await request.put(`/admin/reward-rules/${editingId.value}`, payload)
     } else {
-      await axios.post('/api/admin/reward-rules', payload, { headers })
+      await request.post('/admin/reward-rules', payload)
     }
 
     showModal.value = false
@@ -284,10 +276,7 @@ const handleSave = async () => {
 const handleDelete = async (rule) => {
   if (!confirm('确认删除此规则？')) return
   try {
-    const token = localStorage.getItem('admin_token')
-    await axios.delete(`/api/admin/reward-rules/${rule.id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    await request.delete(`/admin/reward-rules/${rule.id}`)
     await fetchRules()
   } catch (err) { alert('删除失败') }
 }

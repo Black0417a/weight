@@ -45,7 +45,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import axios from 'axios'
+import request from '@/utils/request'
 import * as echarts from 'echarts'
 
 const chartRef = ref(null)
@@ -89,18 +89,16 @@ const fetchData = async () => {
   loading.value = true
   records.value = []
   try {
-    const token = localStorage.getItem('user_token')
-    const headers = { Authorization: `Bearer ${token}` }
     const range = computeDateRange(period.value)
 
     const [weightRes, goalRes] = await Promise.all([
-      axios.get('/api/weights', { params: { start_date: range.start, end_date: range.end }, headers }),
-      axios.get('/api/goal', { headers })
+      request.get('/weights', { params: { start_date: range.start, end_date: range.end } }),
+      request.get('/goal')
     ])
 
-    records.value = weightRes.data
-    if (goalRes.data.target_weight) {
-      goal.value = goalRes.data
+    records.value = weightRes
+    if (goalRes.target_weight) {
+      goal.value = goalRes
     } else {
       goal.value = null
     }

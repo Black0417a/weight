@@ -30,7 +30,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import request from '@/utils/request'
 
 const currentGoal = ref(null)
 const targetWeight = ref('')

@@ -67,7 +67,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import request from '@/utils/request'
 
 const users = ref([])
 const search = ref('')

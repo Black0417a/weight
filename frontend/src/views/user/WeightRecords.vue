@@ -64,7 +64,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import request from '@/utils/request'
 
 const today = new Date().toISOString().split('T')[0]
 const records = ref([])
@@ -120,11 +120,10 @@ const handleAdd = async () => {
   }
   saving.value = true
   try {
-    const token = localStorage.getItem('user_token')
-    await axios.post('/api/weights', {
+    await request.post('/weights', {
       weight: w,
       record_date: addDate.value
-    }, { headers: { Authorization: `Bearer ${token}` } })
+    })
     showModal.value = false
     await fetchRecords()
   } catch (err) {
@@ -137,10 +136,7 @@ const handleAdd = async () => {
 const handleDelete = async (record) => {
   if (!confirm(`删除 ${record.record_date} 的记录？`)) return
   try {
-    const token = localStorage.getItem('user_token')
-    await axios.delete(`/api/weights/${record.id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    await request.delete(`/weights/${record.id}`)
     await fetchRecords()
   } catch (err) {
     alert('删除失败')

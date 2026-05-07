@@ -23,17 +23,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import request from '@/utils/request'
 
 const stats = ref({ user_count: 0, record_count: 0, active_rule_count: 0 })
 
 const fetchStats = async () => {
   try {
-    const token = localStorage.getItem('admin_token')
-    const res = await axios.get('/api/admin/dashboard/stats', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    stats.value = res.data
+    const res = await request.get('/admin/dashboard/stats')
+    stats.value = res
   } catch (err) { console.error(err) }
 }
 

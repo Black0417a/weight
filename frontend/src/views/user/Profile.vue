@@ -35,7 +35,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import axios from 'axios'
+import request from '@/utils/request'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -44,23 +44,19 @@ const reminderEnabled = ref(true)
 
 const fetchData = async () => {
   try {
-    const token = localStorage.getItem('user_token')
-    const headers = { Authorization: `Bearer ${token}` }
-
     const userInfo = localStorage.getItem('user_info')
     if (userInfo) { user.value = JSON.parse(userInfo) }
 
-    const remRes = await axios.get('/api/reminder-settings', { headers })
-    reminderEnabled.value = remRes.data.email_reminder_enabled
+    const remRes = await request.get('/reminder-settings')
+    reminderEnabled.value = remRes.email_reminder_enabled
   } catch (err) { console.error(err) }
 }
 
 const toggleReminder = async () => {
   try {
-    const token = localStorage.getItem('user_token')
-    await axios.put('/api/reminder-settings', {
+    await request.put('/reminder-settings', {
       email_reminder_enabled: reminderEnabled.value
-    }, { headers: { Authorization: `Bearer ${token}` } })
+    })
   } catch (err) { console.error(err) }
 }
 

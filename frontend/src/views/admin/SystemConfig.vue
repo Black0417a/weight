@@ -56,7 +56,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import request from '@/utils/request'
 
 const configs = ref([])
 const showModal = ref(false)
@@ -66,11 +66,8 @@ const editForm = ref({ key: '', value: '', description: '' })
 
 const fetchConfigs = async () => {
   try {
-    const token = localStorage.getItem('admin_token')
-    const res = await axios.get('/api/admin/configs', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    configs.value = res.data
+    const res = await request.get('/admin/configs')
+    configs.value = res
   } catch (err) { console.error(err) }
 }
 
