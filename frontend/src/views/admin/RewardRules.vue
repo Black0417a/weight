@@ -15,6 +15,7 @@
             <th>名称</th>
             <th>条件类型</th>
             <th>发放模式</th>
+            <th>目标用户</th>
             <th>状态</th>
             <th>操作</th>
           </tr>
@@ -24,6 +25,7 @@
             <td>{{ r.name }}</td>
             <td>{{ r.condition_type === 'weight_change' ? '体重变化' : '目标达成' }}</td>
             <td>{{ r.grant_mode === 'auto' ? '自动' : '手动' }}</td>
+            <td>{{ formatTargetUsers(r.target_users) }}</td>
             <td><span :class="r.is_active ? 'tag-active' : 'tag-inactive'">{{ r.is_active ? '启用' : '禁用' }}</span></td>
             <td class="actions">
               <button class="btn btn-sm btn-secondary" @click="openEdit(r)">编辑</button>
@@ -86,7 +88,31 @@
         </div>
         <div class="form-group">
           <label>目标用户</label>
-          <input v-model="form.target_users" class="input-field" placeholder="all 表示全部，或用逗号分隔用户ID" />
+          <div class="user-select-box">
+            <div class="user-select-all">
+              <label class="checkbox-item">
+                <input type="checkbox" v-model="allSelected" @change="toggleAll" />
+                <span>全部用户</span>
+              </label>
+            </div>
+            <div class="user-select-list">
+              <label
+                v-for="u in allUsers"
+                :key="u.id"
+                class="checkbox-item"
+                :class="{ 'disabled': allSelected }"
+              >
+                <input
+                  type="checkbox"
+                  :value="u.id"
+                  v-model="selectedUserIds"
+                  :disabled="allSelected"
+                />
+                <span>{{ u.email }}</span>
+              </label>
+            </div>
+            <div v-if="allUsers.length === 0" class="user-select-empty">暂无用户</div>
+          </div>
         </div>
         <div class="form-group">
           <label>
@@ -103,16 +129,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 
 const rules = ref([])
+const allUsers = ref([])
 const showModal = ref(false)
 const isEditing = ref(false)
 const editingId = ref(null)
 const saving = ref(false)
 const errorMsg = ref('')
 const selectedFile = ref(null)
+const selectedUserIds = ref([])
+const allSelected = ref(true)
 
 const defaultForm = () => ({
   name: '',
@@ -122,11 +151,34 @@ const defaultForm = () => ({
   reward_content: '',
   reward_image: null,
   grant_mode: 'auto',
-  target_users: 'all',
   is_active: true
 })
 
 const form = ref(defaultForm())
+
+const formatTargetUsers = (target) => {
+  if (!target || target === 'all') return '全部用户'
+  if (Array.isArray(target)) {
+    if (target.length === 0) return '无'
+    const names = target.map(id => {
+      const u = allUsers.value.find(u => u.id === Number(id))
+      return u ? u.email : `#${id}`
+    })
+    return names.join(', ')
+  }
+  return String(target)
+}
+
+const fetchUsers = async () => {
+  try {
+    const token = localStorage.getItem('admin_token')
+    const res = await axios.get('/api/admin/users', {
+      params: { per_page: 1000 },
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    allUsers.value = res.data.users
+  } catch (err) { console.error(err) }
+}
 
 const fetchRules = async () => {
   try {
@@ -143,10 +195,12 @@ const openCreate = () => {
   editingId.value = null
   form.value = defaultForm()
   selectedFile.value = null
+  allSelected.value = true
+  selectedUserIds.value = []
   showModal.value = true
 }
 
-const openEdit = (rule) => {
+const openEdit = async (rule) => {
   isEditing.value = true
   editingId.value = rule.id
   form.value = {
@@ -157,11 +211,29 @@ const openEdit = (rule) => {
     reward_content: rule.reward_content || '',
     reward_image: rule.reward_image || null,
     grant_mode: rule.grant_mode,
-    target_users: typeof rule.target_users === 'string' ? rule.target_users : rule.target_users.join(','),
     is_active: rule.is_active
   }
   selectedFile.value = null
+
+  const target = rule.target_users
+  if (target === 'all' || (Array.isArray(target) && target.length === 0)) {
+    allSelected.value = true
+    selectedUserIds.value = []
+  } else if (Array.isArray(target)) {
+    allSelected.value = false
+    selectedUserIds.value = target.map(Number)
+  } else {
+    allSelected.value = true
+    selectedUserIds.value = []
+  }
+
   showModal.value = true
+}
+
+const toggleAll = () => {
+  if (allSelected.value) {
+    selectedUserIds.value = []
+  }
 }
 
 const onFileChange = (e) => {
@@ -177,9 +249,12 @@ const handleSave = async () => {
     const token = localStorage.getItem('admin_token')
     const headers = { Authorization: `Bearer ${token}` }
 
-    let targetUsers = form.value.target_users
-    if (targetUsers && targetUsers !== 'all') {
-      targetUsers = targetUsers.split(',').map(s => s.trim()).filter(Boolean)
+    let targetUsers = 'all'
+    if (!allSelected.value) {
+      targetUsers = selectedUserIds.value.map(String)
+      if (targetUsers.length === 0) {
+        targetUsers = 'all'
+      }
     }
 
     const payload = {
@@ -197,11 +272,6 @@ const handleSave = async () => {
       await axios.put(`/api/admin/reward-rules/${editingId.value}`, payload, { headers })
     } else {
       await axios.post('/api/admin/reward-rules', payload, { headers })
-      if (selectedFile.value && form.value.reward_type === 'image') {
-        const fd = new FormData()
-        fd.append('image', selectedFile.value)
-        // 上传图片可以在创建后单独调用
-      }
     }
 
     showModal.value = false
@@ -222,7 +292,10 @@ const handleDelete = async (rule) => {
   } catch (err) { alert('删除失败') }
 }
 
-onMounted(fetchRules)
+onMounted(() => {
+  fetchUsers()
+  fetchRules()
+})
 </script>
 
 <style scoped>
@@ -263,4 +336,66 @@ onMounted(fetchRules)
 }
 
 .error-msg { color: var(--color-danger); font-size: var(--font-size-xs); margin-bottom: var(--spacing-sm); }
+
+.user-select-box {
+  border: 2px solid #ffe0e0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.user-select-all {
+  padding: 10px 14px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid #ffe0e0;
+}
+
+.user-select-list {
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.user-select-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-light);
+  font-size: var(--font-size-sm);
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  transition: background 0.2s ease;
+}
+
+.checkbox-item:hover {
+  background: var(--bg-hover);
+}
+
+.checkbox-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.checkbox-item.disabled:hover {
+  background: transparent;
+}
+
+.checkbox-item input[type="checkbox"] {
+  accent-color: var(--color-primary);
+  width: 16px;
+  height: 16px;
+}
+
+.checkbox-item span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 </style>
