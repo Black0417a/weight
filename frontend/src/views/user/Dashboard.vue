@@ -1,187 +1,474 @@
 <template>
   <div class="dashboard">
-    <h2 class="page-title">🏠 今日记录</h2>
-    <div class="dash-grid">
-      <div class="card quick-record">
-        <h3 class="card-title">📝 快速记录</h3>
-        <div class="form-group">
-          <label>日期</label>
-          <input
-            type="date"
-            v-model="recordDate"
-            :max="today"
-            class="input-field"
-          />
-        </div>
-        <div class="form-group">
-          <label>体重 (kg)</label>
+    <div class="today-card card">
+      <p class="today-label">{{ isToday ? '今日体重' : '最近体重' }}</p>
+      <p class="today-date">{{ displayDate }}</p>
+      <div class="today-weight-row">
+        <span class="today-weight">{{ displayWeight }}</span>
+        <span class="today-unit">kg</span>
+      </div>
+      <div v-if="goal" class="today-goal-row">
+        <span class="goal-hint">🎯 目标 {{ goal.target_weight }}kg</span>
+        <span v-if="displayWeight !== '--'" class="goal-remain">
+          还差 {{ (displayWeight - goal.target_weight).toFixed(1) }}kg
+        </span>
+      </div>
+      <router-link v-else to="/goal" class="set-goal-link">设置目标体重 →</router-link>
+
+      <div class="quick-record">
+        <div class="quick-input-row">
           <input
             type="number"
-            v-model="weight"
+            v-model="quickWeight"
             step="0.1"
             min="1"
             max="500"
-            class="input-field"
-            placeholder="请输入体重"
-            @keyup.enter="handleSubmit"
+            class="quick-input"
+            placeholder="记录今日体重"
+            @keyup.enter="handleQuickRecord"
           />
+          <button class="btn btn-primary quick-btn" :disabled="saving" @click="handleQuickRecord">
+            {{ saving ? '...' : '记录' }}
+          </button>
         </div>
-        <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
-        <button class="btn btn-primary quick-btn" :disabled="loading" @click="handleSubmit">
-          {{ loading ? '保存中...' : '记录体重' }}
-        </button>
+        <p v-if="quickError" class="quick-error">{{ quickError }}</p>
+        <p v-if="quickSuccess" class="quick-success">{{ quickSuccess }}</p>
       </div>
-      <div class="card last-record" v-if="lastRecord">
-        <h3 class="card-title">📌 最近记录</h3>
-        <p class="last-date">{{ lastRecord.record_date }}</p>
-        <p class="last-weight">{{ lastRecord.weight }} <span>kg</span></p>
+    </div>
+
+    <div class="card calendar-card">
+      <div class="calendar-header">
+        <button class="nav-btn" @click="prevMonth">‹</button>
+        <span class="calendar-title">{{ calendarTitle }}</span>
+        <button class="nav-btn" @click="nextMonth">›</button>
       </div>
-      <div class="card goal-card">
-        <h3 class="card-title">🎯 目标体重</h3>
-        <p v-if="goal" class="goal-weight">{{ goal.target_weight }} <span>kg</span></p>
-        <p v-else class="no-goal">尚未设置目标体重</p>
+      <div class="calendar-weekdays">
+        <span v-for="d in weekdays" :key="d" class="weekday">{{ d }}</span>
+      </div>
+      <div class="calendar-grid">
+        <div
+          v-for="(day, idx) in calendarDays"
+          :key="idx"
+          class="calendar-day"
+          :class="{
+            'empty': !day.date,
+            'today': day.isToday,
+            'has-record': day.weight,
+            'other-month': day.otherMonth
+          }"
+        >
+          <span v-if="day.date" class="day-num">{{ day.day }}</span>
+          <span v-if="day.weight" class="day-weight">{{ day.weight }}</span>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
 
-const today = new Date().toISOString().split('T')[0]
-const recordDate = ref(today)
-const weight = ref('')
-const errorMsg = ref('')
-const loading = ref(false)
-const lastRecord = ref(null)
+const today = new Date()
+const todayStr = today.toISOString().split('T')[0]
+const records = ref([])
 const goal = ref(null)
+const viewYear = ref(today.getFullYear())
+const viewMonth = ref(today.getMonth())
+
+const quickWeight = ref('')
+const quickError = ref('')
+const quickSuccess = ref('')
+const saving = ref(false)
+
+const weekdays = ['日', '一', '二', '三', '四', '五', '六']
+
+const isToday = computed(() => {
+  if (records.value.length === 0) return false
+  return records.value[records.value.length - 1].record_date === todayStr
+})
+
+const displayDate = computed(() => {
+  if (records.value.length === 0) return todayStr
+  return records.value[records.value.length - 1].record_date
+})
+
+const displayWeight = computed(() => {
+  if (records.value.length === 0) return '--'
+  return records.value[records.value.length - 1].weight
+})
+
+const calendarTitle = computed(() => {
+  return `${viewYear.value}年${viewMonth.value + 1}月`
+})
+
+const weightMap = computed(() => {
+  const map = {}
+  records.value.forEach(r => {
+    map[r.record_date] = r.weight
+  })
+  return map
+})
+
+const calendarDays = computed(() => {
+  const year = viewYear.value
+  const month = viewMonth.value
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+  const daysInMonth = lastDay.getDate()
+  const startWeekday = firstDay.getDay()
+
+  const days = []
+
+  for (let i = 0; i < startWeekday; i++) {
+    const prevDate = new Date(year, month, -startWeekday + i + 1)
+    const dateStr = prevDate.toISOString().split('T')[0]
+    days.push({
+      date: prevDate,
+      dateStr,
+      day: prevDate.getDate(),
+      otherMonth: true,
+      isToday: dateStr === todayStr,
+      weight: weightMap.value[dateStr]
+    })
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d)
+    const dateStr = date.toISOString().split('T')[0]
+    days.push({
+      date,
+      dateStr,
+      day: d,
+      otherMonth: false,
+      isToday: dateStr === todayStr,
+      weight: weightMap.value[dateStr]
+    })
+  }
+
+  const remaining = 42 - days.length
+  for (let i = 1; i <= remaining; i++) {
+    const nextDate = new Date(year, month + 1, i)
+    const dateStr = nextDate.toISOString().split('T')[0]
+    days.push({
+      date: nextDate,
+      dateStr,
+      day: nextDate.getDate(),
+      otherMonth: true,
+      isToday: dateStr === todayStr,
+      weight: weightMap.value[dateStr]
+    })
+  }
+
+  return days
+})
+
+const prevMonth = () => {
+  if (viewMonth.value === 0) {
+    viewMonth.value = 11
+    viewYear.value--
+  } else {
+    viewMonth.value--
+  }
+}
+
+const nextMonth = () => {
+  if (viewMonth.value === 11) {
+    viewMonth.value = 0
+    viewYear.value++
+  } else {
+    viewMonth.value++
+  }
+}
+
+const handleQuickRecord = async () => {
+  quickError.value = ''
+  quickSuccess.value = ''
+
+  if (!quickWeight.value) {
+    quickError.value = '请输入体重'
+    return
+  }
+
+  const w = parseFloat(quickWeight.value)
+  if (w <= 0 || w > 500) {
+    quickError.value = '体重数值不合法'
+    return
+  }
+
+  saving.value = true
+  try {
+    const token = localStorage.getItem('user_token')
+    await axios.post('/api/weights', {
+      weight: w,
+      record_date: todayStr
+    }, { headers: { Authorization: `Bearer ${token}` } })
+
+    quickSuccess.value = '记录成功！'
+    quickWeight.value = ''
+    await fetchData()
+
+    setTimeout(() => {
+      quickSuccess.value = ''
+    }, 2000)
+  } catch (err) {
+    quickError.value = err.response?.data?.error || '记录失败'
+  } finally {
+    saving.value = false
+  }
+}
 
 const fetchData = async () => {
   try {
     const token = localStorage.getItem('user_token')
     const headers = { Authorization: `Bearer ${token}` }
 
-    const weightRes = await axios.get('/api/weights', {
-      params: { end_date: today },
-      headers
-    })
-    if (weightRes.data.length > 0) {
-      lastRecord.value = weightRes.data[weightRes.data.length - 1]
-    }
+    const startDate = new Date(viewYear.value, viewMonth.value - 1, 1)
+    const endDate = new Date(viewYear.value, viewMonth.value + 2, 0)
+    const start = startDate.toISOString().split('T')[0]
+    const end = endDate.toISOString().split('T')[0]
 
-    const goalRes = await axios.get('/api/goal', { headers })
+    const [res, goalRes] = await Promise.all([
+      axios.get('/api/weights', { params: { start_date: start, end_date: end }, headers }),
+      axios.get('/api/goal', { headers })
+    ])
+    records.value = res.data
     if (goalRes.data.target_weight) {
       goal.value = goalRes.data
     }
   } catch (err) {
-    console.error('获取数据失败', err)
+    console.error(err)
   }
 }
 
-const handleSubmit = async () => {
-  errorMsg.value = ''
-  if (!weight.value) {
-    errorMsg.value = '请输入体重'
-    return
-  }
-  const w = parseFloat(weight.value)
-  if (w <= 0 || w > 500) {
-    errorMsg.value = '体重数值不合法'
-    return
-  }
-  loading.value = true
-  try {
-    const token = localStorage.getItem('user_token')
-    await axios.post('/api/weights', {
-      weight: w,
-      record_date: recordDate.value
-    }, { headers: { Authorization: `Bearer ${token}` } })
-    weight.value = ''
-    await fetchData()
-  } catch (err) {
-    errorMsg.value = err.response?.data?.error || '保存失败'
-  } finally {
-    loading.value = false
-  }
-}
+watch([viewYear, viewMonth], fetchData)
 
 onMounted(fetchData)
 </script>
 
 <style scoped>
-.dash-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-lg);
+.today-card {
+  text-align: center;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  background: linear-gradient(135deg, #fff5f5, #ffe8e8);
+  border-radius: var(--radius-xl);
+  margin-bottom: var(--spacing-lg);
 }
 
-.card-title {
-  font-size: var(--font-size-base);
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-md);
-  font-weight: 600;
-}
-
-.form-group {
-  margin-bottom: var(--spacing-md);
-}
-
-.form-group label {
-  display: block;
+.today-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-light);
   margin-bottom: var(--spacing-xs);
+}
+
+.today-date {
+  font-size: var(--font-size-xs);
+  color: var(--text-light);
+  margin-bottom: var(--spacing-md);
+}
+
+.today-weight-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}
+
+.today-weight {
+  font-size: 56px;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.today-unit {
+  font-size: var(--font-size-xl);
+  color: var(--text-light);
+}
+
+.today-goal-row {
+  margin-top: var(--spacing-md);
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-lg);
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
 }
 
-.error-msg {
-  color: var(--color-danger);
-  font-size: var(--font-size-xs);
-  margin-bottom: var(--spacing-sm);
+.goal-remain {
+  color: var(--color-secondary);
+  font-weight: 600;
+}
+
+.set-goal-link {
+  display: inline-block;
+  margin-top: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.quick-record {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid rgba(255,107,107,0.2);
+}
+
+.quick-input-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+}
+
+.quick-input {
+  width: 140px;
+  padding: 10px 14px;
+  border: 2px solid #ffd4d4;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-base);
+  text-align: center;
+  background: white;
+  transition: border-color 0.2s ease;
+}
+
+.quick-input:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.quick-input::placeholder {
+  color: #ccc;
+  font-size: var(--font-size-sm);
 }
 
 .quick-btn {
-  width: 100%;
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+}
+
+.quick-error {
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
   margin-top: var(--spacing-sm);
 }
 
-.last-date {
-  font-size: var(--font-size-sm);
-  color: var(--text-light);
-  margin-bottom: var(--spacing-xs);
+.quick-success {
+  color: var(--color-success);
+  font-size: var(--font-size-xs);
+  margin-top: var(--spacing-sm);
 }
 
-.last-weight {
-  font-size: var(--font-size-3xl);
-  font-weight: 700;
+.calendar-card {
+  padding: var(--spacing-md);
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md);
+  padding: 0 var(--spacing-sm);
+}
+
+.calendar-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-primary);
   color: var(--color-primary);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.last-weight span {
-  font-size: var(--font-size-base);
-  font-weight: 400;
+.nav-btn:hover {
+  background: var(--color-primary);
+  color: white;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: var(--spacing-sm);
+}
+
+.weekday {
+  text-align: center;
+  font-size: var(--font-size-xs);
   color: var(--text-light);
+  padding: var(--spacing-xs) 0;
 }
 
-.goal-weight {
-  font-size: var(--font-size-3xl);
-  font-weight: 700;
-  color: var(--color-secondary);
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
 }
 
-.goal-weight span {
-  font-size: var(--font-size-base);
-  font-weight: 400;
-  color: var(--text-light);
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  min-height: 48px;
 }
 
-.no-goal {
-  color: var(--text-light);
-  font-size: var(--font-size-sm);
+.calendar-day.empty {
+  background: transparent;
+}
+
+.calendar-day.other-month {
+  opacity: 0.4;
+}
+
+.calendar-day.today {
+  background: var(--color-primary);
+}
+
+.calendar-day.today .day-num,
+.calendar-day.today .day-weight {
+  color: white;
+}
+
+.calendar-day.has-record {
+  background: #ffe8e8;
+}
+
+.calendar-day.today.has-record {
+  background: var(--color-primary);
+}
+
+.day-num {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+
+.day-weight {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-top: 2px;
 }
 
 @media screen and (max-width: 767px) {
-  .dash-grid { grid-template-columns: 1fr; gap: var(--spacing-md); }
-  .last-weight, .goal-weight { font-size: var(--font-size-2xl); }
+  .today-card { padding: var(--spacing-lg); }
+  .today-weight { font-size: 44px; }
+  .quick-input { width: 120px; padding: 8px 12px; font-size: var(--font-size-sm); }
+  .quick-btn { padding: 8px 16px; }
+  .calendar-day { min-height: 40px; }
+  .day-num { font-size: 11px; }
+  .day-weight { font-size: 10px; }
 }
 </style>

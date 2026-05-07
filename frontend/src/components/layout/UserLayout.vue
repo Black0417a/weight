@@ -7,42 +7,43 @@
           <span class="logo-text">体重记录小助手</span>
         </router-link>
         <nav class="nav-desktop">
-          <router-link to="/dashboard" class="nav-link">首页</router-link>
-          <router-link to="/records" class="nav-link">记录</router-link>
-          <router-link to="/batch" class="nav-link">批量录入</router-link>
-          <router-link to="/chart" class="nav-link">趋势</router-link>
-          <router-link to="/goal" class="nav-link">目标</router-link>
-          <router-link to="/profile" class="nav-link">我的</router-link>
+          <router-link to="/dashboard" class="nav-link"><span class="nav-icon">🏠</span>首页</router-link>
+          <router-link to="/records" class="nav-link"><span class="nav-icon">📝</span>记录</router-link>
+          <router-link to="/chart" class="nav-link"><span class="nav-icon">📈</span>趋势</router-link>
+          <router-link to="/goal" class="nav-link"><span class="nav-icon">🎯</span>目标</router-link>
+          <router-link to="/profile" class="nav-link"><span class="nav-icon">👤</span>我的</router-link>
         </nav>
-        <button class="menu-toggle" @click="showMenu = !showMenu">
-          <span class="menu-bar"></span>
-          <span class="menu-bar"></span>
-          <span class="menu-bar"></span>
-        </button>
       </div>
-      <transition name="slide">
-        <nav v-if="showMenu" class="nav-mobile">
-          <router-link to="/dashboard" class="nav-link" @click="showMenu = false">🏠 首页</router-link>
-          <router-link to="/records" class="nav-link" @click="showMenu = false">📝 记录</router-link>
-          <router-link to="/batch" class="nav-link" @click="showMenu = false">📋 批量录入</router-link>
-          <router-link to="/chart" class="nav-link" @click="showMenu = false">📊 趋势</router-link>
-          <router-link to="/goal" class="nav-link" @click="showMenu = false">🎯 目标</router-link>
-          <router-link to="/profile" class="nav-link" @click="showMenu = false">👤 我的</router-link>
-        </nav>
-      </transition>
     </header>
     <main class="user-main">
       <router-view />
     </main>
-    <footer class="user-footer">
-      <p>💖 坚持记录，遇见更好的自己</p>
-    </footer>
+    <nav class="nav-mobile-bottom">
+      <router-link to="/dashboard" class="tab-item">
+        <span class="tab-icon">📊</span>
+        <span class="tab-label">首页</span>
+      </router-link>
+      <router-link to="/records" class="tab-item">
+        <span class="tab-icon">📝</span>
+        <span class="tab-label">记录</span>
+      </router-link>
+      <router-link to="/chart" class="tab-item">
+        <span class="tab-icon">📈</span>
+        <span class="tab-label">趋势</span>
+      </router-link>
+      <router-link to="/goal" class="tab-item">
+        <span class="tab-icon">🎯</span>
+        <span class="tab-label">目标</span>
+      </router-link>
+      <router-link to="/profile" class="tab-item">
+        <span class="tab-icon">👤</span>
+        <span class="tab-label">我的</span>
+      </router-link>
+    </nav>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-const showMenu = ref(false)
 </script>
 
 <style scoped>
@@ -78,9 +79,7 @@ const showMenu = ref(false)
   color: var(--text-primary);
 }
 
-.logo-icon {
-  font-size: 28px;
-}
+.logo-icon { font-size: 28px; }
 
 .logo-text {
   font-size: var(--font-size-lg);
@@ -88,10 +87,7 @@ const showMenu = ref(false)
   color: var(--color-primary);
 }
 
-.nav-desktop {
-  display: flex;
-  gap: var(--spacing-xs);
-}
+.nav-desktop { display: flex; gap: var(--spacing-xs); }
 
 .nav-link {
   padding: 8px 16px;
@@ -100,6 +96,9 @@ const showMenu = ref(false)
   font-size: var(--font-size-sm);
   transition: all 0.3s ease;
   text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .nav-link:hover,
@@ -108,58 +107,41 @@ const showMenu = ref(false)
   background: var(--bg-hover);
 }
 
-.menu-toggle {
-  display: none;
-  flex-direction: column;
-  gap: 5px;
-  background: none;
-  padding: 4px;
-}
+.nav-icon { font-size: 16px; }
 
-.menu-bar {
-  width: 24px;
-  height: 2px;
-  background: var(--color-primary);
-  border-radius: 2px;
-  transition: all 0.3s ease;
-}
-
-.nav-mobile {
+.nav-mobile-bottom {
   display: none;
-  flex-direction: column;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   background: white;
-  padding: var(--spacing-md);
-  border-top: 1px solid var(--bg-secondary);
+  border-top: 1px solid #ffe0e0;
+  z-index: 100;
+  justify-content: space-around;
+  padding: 4px 0 env(safe-area-inset-bottom, 8px);
 }
 
-.slide-enter-active,
-.slide-leave-active {
-  transition: all 0.3s ease;
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 0;
+  text-decoration: none;
+  color: var(--text-light);
+  transition: color 0.3s ease;
+  flex: 1;
 }
 
-.slide-enter-from,
-.slide-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
+.tab-icon { font-size: 22px; line-height: 1; }
+
+.tab-label {
+  font-size: 10px;
+  margin-top: 2px;
 }
 
-@media screen and (max-width: 767px) {
-  .nav-desktop { display: none; }
-  .menu-toggle { display: flex; }
-  .nav-mobile { display: flex; }
-
-  .nav-mobile .nav-link {
-    padding: 12px 16px;
-    font-size: var(--font-size-base);
-    border-radius: var(--radius-md);
-  }
-
-  .header-content {
-    padding: 0 var(--spacing-md);
-    height: var(--header-height-mobile);
-  }
-
-  .logo-text { font-size: var(--font-size-base); }
+.tab-item.router-link-active {
+  color: var(--color-primary);
 }
 
 .user-main {
@@ -171,14 +153,17 @@ const showMenu = ref(false)
 }
 
 @media screen and (max-width: 767px) {
-  .user-main { padding: var(--spacing-md); }
-}
-
-.user-footer {
-  text-align: center;
-  padding: var(--spacing-lg);
-  color: var(--text-light);
-  font-size: var(--font-size-sm);
-  background: var(--bg-secondary);
+  .header-content {
+    padding: 0 var(--spacing-md);
+    height: var(--header-height-mobile);
+    justify-content: center;
+  }
+  .nav-desktop { display: none; }
+  .logo-text { font-size: var(--font-size-base); }
+  .nav-mobile-bottom { display: flex; }
+  .user-main {
+    padding: var(--spacing-md);
+    padding-bottom: 70px;
+  }
 }
 </style>

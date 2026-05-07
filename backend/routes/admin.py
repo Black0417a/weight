@@ -71,7 +71,7 @@ def admin_login():
     if not admin.is_active:
         return jsonify({'error': '账户尚未激活'}), 403
 
-    expires = timedelta(hours=48)
+    expires = timedelta(days=3650)
     access_token = create_access_token(
         identity=str(admin.id),
         additional_claims={'role': 'admin'},

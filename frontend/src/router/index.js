@@ -25,12 +25,6 @@ const routes = [
         meta: { title: '体重记录' }
       },
       {
-        path: 'batch',
-        name: 'BatchRecord',
-        component: () => import('@/views/user/BatchRecord.vue'),
-        meta: { title: '批量录入' }
-      },
-      {
         path: 'chart',
         name: 'ChartView',
         component: () => import('@/views/user/ChartView.vue'),

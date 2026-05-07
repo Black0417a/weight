@@ -34,7 +34,7 @@ def login():
         db.session.commit()
         is_new = True
 
-    expires = timedelta(hours=24)
+    expires = timedelta(days=3650)
     access_token = create_access_token(
         identity=str(user.id),
         additional_claims={'role': 'user'},
