@@ -5,6 +5,9 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: 3000,
+    allowedHosts: [
+      'www.rxaoknjn0.nyat.app'
+    ],
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:6000',

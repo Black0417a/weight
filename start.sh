@@ -1,4 +1,3 @@
-NEW_FILE_CODE
 #!/bin/bash
 
 echo "========================================"
@@ -8,6 +7,9 @@ echo ""
 
 # 切换到项目根目录
 cd "$(dirname "$0")"
+
+# 创建日志目录
+mkdir -p logs
 
 # 启动后端（后台运行）
 echo "正在启动后端服务..."
@@ -27,9 +29,6 @@ nohup npm run dev -- --port 3001 > ../logs/frontend.log 2>&1 &
 FRONTEND_PID=$!
 echo "前端进程 PID: $FRONTEND_PID"
 cd ..
-
-# 创建日志目录（如果不存在）
-mkdir -p logs
 
 echo ""
 echo "========================================"
