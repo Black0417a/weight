@@ -80,11 +80,10 @@ const handleSave = async () => {
   errorMsg.value = ''
   saving.value = true
   try {
-    const token = localStorage.getItem('admin_token')
-    await axios.put(`/api/admin/configs/${editForm.value.key}`, {
+    await request.put(`/admin/configs/${editForm.value.key}`, {
       value: editForm.value.value,
       description: editForm.value.description
-    }, { headers: { Authorization: `Bearer ${token}` } })
+    })
     showModal.value = false
     await fetchConfigs()
   } catch (err) {

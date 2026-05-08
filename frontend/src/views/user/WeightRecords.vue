@@ -88,11 +88,8 @@ const getWeekday = (d) => {
 
 const fetchRecords = async () => {
   try {
-    const token = localStorage.getItem('user_token')
-    const res = await axios.get('/api/weights', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    records.value = res.data.reverse()
+    const res = await request.get('/weights')
+    records.value = res.reverse()
   } catch (err) {
     console.error(err)
   } finally {

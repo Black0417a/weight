@@ -79,24 +79,19 @@ const detailRecords = ref([])
 
 const fetchUsers = async () => {
   try {
-    const token = localStorage.getItem('admin_token')
-    const res = await axios.get('/api/admin/users', {
-      params: { page: page.value, search: search.value },
-      headers: { Authorization: `Bearer ${token}` }
+    const res = await request.get('/admin/users', {
+      params: { page: page.value, search: search.value }
     })
-    users.value = res.data.users
-    totalPages.value = res.data.pages
+    users.value = res.users
+    totalPages.value = res.pages
   } catch (err) { console.error(err) }
 }
 
 const showDetail = async (user) => {
   try {
-    const token = localStorage.getItem('admin_token')
-    const res = await axios.get(`/api/admin/users/${user.id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    detailUser.value = res.data.user
-    detailRecords.value = res.data.weight_records
+    const res = await request.get(`/admin/users/${user.id}`)
+    detailUser.value = res.user
+    detailRecords.value = res.weight_records
     showModal.value = true
   } catch (err) { console.error(err) }
 }
@@ -104,10 +99,7 @@ const showDetail = async (user) => {
 const handleDelete = async (user) => {
   if (!confirm(`确认删除用户 ${user.email}？`)) return
   try {
-    const token = localStorage.getItem('admin_token')
-    await axios.delete(`/api/admin/users/${user.id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    await request.delete(`/admin/users/${user.id}`)
     await fetchUsers()
   } catch (err) { alert('删除失败') }
 }

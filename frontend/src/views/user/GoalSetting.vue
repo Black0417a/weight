@@ -40,12 +40,9 @@ const loading = ref(false)
 
 const fetchGoal = async () => {
   try {
-    const token = localStorage.getItem('user_token')
-    const res = await axios.get('/api/goal', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    if (res.data.target_weight) {
-      currentGoal.value = res.data
+    const res = await request.get('/goal')
+    if (res.target_weight) {
+      currentGoal.value = res
     }
   } catch (err) { console.error(err) }
 }
@@ -64,10 +61,7 @@ const handleSave = async () => {
   }
   loading.value = true
   try {
-    const token = localStorage.getItem('user_token')
-    await axios.put('/api/goal', { target_weight: w }, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    const res = await request.put('/goal', { target_weight: w })
     successMsg.value = '目标体重已保存'
     targetWeight.value = ''
     await fetchGoal()

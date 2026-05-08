@@ -198,11 +198,10 @@ const handleQuickRecord = async () => {
 
   saving.value = true
   try {
-    const token = localStorage.getItem('user_token')
-    await axios.post('/api/weights', {
+    await request.post('/weights', {
       weight: w,
       record_date: todayStr
-    }, { headers: { Authorization: `Bearer ${token}` } })
+    })
 
     quickSuccess.value = '记录成功！'
     quickWeight.value = ''
