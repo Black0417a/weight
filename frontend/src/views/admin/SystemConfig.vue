@@ -13,10 +13,10 @@
         </thead>
         <tbody>
           <tr v-for="c in configs" :key="c.id">
-            <td><code>{{ c.key }}</code></td>
-            <td>{{ c.value }}</td>
-            <td>{{ c.description }}</td>
-            <td>
+            <td data-label="配置项"><code>{{ c.key }}</code></td>
+            <td data-label="值">{{ c.value }}</td>
+            <td data-label="说明">{{ c.description }}</td>
+            <td data-label="操作" class="actions">
               <button class="btn btn-sm btn-secondary" @click="editConfig(c)">编辑</button>
             </td>
           </tr>
@@ -131,4 +131,68 @@ code {
 }
 
 .error-msg { color: var(--color-danger); font-size: var(--font-size-xs); margin-bottom: var(--spacing-sm); }
+
+.actions { display: flex; gap: 4px; }
+
+@media screen and (max-width: 767px) {
+  .data-table {
+    display: block;
+    width: 100%;
+  }
+
+  .data-table thead {
+    display: none;
+  }
+
+  .data-table tbody {
+    display: block;
+  }
+
+  .data-table tr {
+    display: block;
+    margin-bottom: var(--spacing-md);
+    border: 1px solid #eee;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm);
+  }
+
+  .data-table td {
+    display: block;
+    border: none;
+    position: relative;
+    padding: 8px 8px 8px 50%;
+    white-space: normal;
+    text-align: right;
+    font-size: var(--font-size-xs);
+  }
+
+  .data-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 8px;
+    width: 45%;
+    font-weight: 500;
+    text-align: left;
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+  }
+
+  .data-table td.actions {
+    padding-left: 0;
+    text-align: center;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    border-bottom: none;
+  }
+
+  .data-table td.actions::before {
+    display: none;
+  }
+
+  .modal-content {
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+}
 </style>

@@ -18,11 +18,11 @@
         </thead>
         <tbody>
           <tr v-for="u in users" :key="u.id">
-            <td>{{ u.id }}</td>
-            <td>{{ u.email }}</td>
-            <td>{{ u.record_count }}</td>
-            <td>{{ u.created_at ? new Date(u.created_at).toLocaleDateString('zh-CN') : '-' }}</td>
-            <td class="actions">
+            <td data-label="ID">{{ u.id }}</td>
+            <td data-label="邮箱">{{ u.email }}</td>
+            <td data-label="记录数">{{ u.record_count }}</td>
+            <td data-label="注册时间">{{ u.created_at ? new Date(u.created_at).toLocaleDateString('zh-CN') : '-' }}</td>
+            <td data-label="操作" class="actions">
               <button class="btn btn-sm btn-secondary" @click="showDetail(u)">详情</button>
               <button class="btn btn-sm btn-delete" @click="handleDelete(u)">删除</button>
             </td>
@@ -151,4 +151,79 @@ onMounted(fetchUsers)
 }
 
 .page-info { font-size: var(--font-size-sm); color: var(--text-secondary); }
+
+@media screen and (max-width: 767px) {
+  .data-table {
+    display: block;
+    width: 100%;
+  }
+
+  .data-table thead {
+    display: none;
+  }
+
+  .data-table tbody {
+    display: block;
+  }
+
+  .data-table tr {
+    display: block;
+    margin-bottom: var(--spacing-md);
+    border: 1px solid #eee;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm);
+  }
+
+  .data-table td {
+    display: block;
+    border: none;
+    position: relative;
+    padding: 8px 8px 8px 50%;
+    white-space: normal;
+    text-align: right;
+    font-size: var(--font-size-xs);
+  }
+
+  .data-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 8px;
+    width: 45%;
+    font-weight: 500;
+    text-align: left;
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+  }
+
+  .data-table td.actions {
+    padding-left: 0;
+    text-align: center;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    border-bottom: none;
+  }
+
+  .data-table td.actions::before {
+    display: none;
+  }
+
+  .toolbar {
+    flex-direction: column;
+  }
+
+  .search-input {
+    max-width: 100%;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+
+  .modal-content {
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+}
 </style>

@@ -1,5 +1,6 @@
 <template>
   <div class="admin-layout">
+    <div v-if="showSidebar" class="sidebar-backdrop" @click="showSidebar = false"></div>
     <aside class="admin-sidebar" :class="{ 'sidebar-open': showSidebar }">
       <div class="sidebar-header">
         <span class="sidebar-logo">⚙️</span>
@@ -176,6 +177,23 @@ const handleLogout = () => {
   max-width: 1200px;
 }
 
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  z-index: 199;
+}
+
+@media screen and (min-width: 1200px) {
+  .sidebar-backdrop {
+    display: none !important;
+  }
+}
+
 @media screen and (max-width: 1199px) {
   .admin-sidebar { transform: translateX(-100%); }
   .admin-sidebar.sidebar-open {
@@ -184,6 +202,9 @@ const handleLogout = () => {
   }
   .admin-main { margin-left: 0; }
   .sidebar-toggle { display: flex; }
+  .sidebar-backdrop {
+    display: block !important;
+  }
 }
 
 @media screen and (max-width: 767px) {

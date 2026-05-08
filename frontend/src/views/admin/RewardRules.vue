@@ -22,12 +22,12 @@
         </thead>
         <tbody>
           <tr v-for="r in rules" :key="r.id">
-            <td>{{ r.name }}</td>
-            <td>{{ r.condition_type === 'weight_change' ? '体重变化' : '目标达成' }}</td>
-            <td>{{ r.grant_mode === 'auto' ? '自动' : '手动' }}</td>
-            <td>{{ formatTargetUsers(r.target_users) }}</td>
-            <td><span :class="r.is_active ? 'tag-active' : 'tag-inactive'">{{ r.is_active ? '启用' : '禁用' }}</span></td>
-            <td class="actions">
+            <td data-label="名称">{{ r.name }}</td>
+            <td data-label="条件类型">{{ r.condition_type === 'weight_change' ? '体重变化' : '目标达成' }}</td>
+            <td data-label="发放模式">{{ r.grant_mode === 'auto' ? '自动' : '手动' }}</td>
+            <td data-label="目标用户">{{ formatTargetUsers(r.target_users) }}</td>
+            <td data-label="状态"><span :class="r.is_active ? 'tag-active' : 'tag-inactive'">{{ r.is_active ? '启用' : '禁用' }}</span></td>
+            <td data-label="操作" class="actions">
               <button class="btn btn-sm btn-secondary" @click="openEdit(r)">编辑</button>
               <button class="btn btn-sm btn-delete" @click="handleDelete(r)">删除</button>
             </td>
@@ -37,7 +37,7 @@
     </div>
 
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
-      <div class="modal-content" style="max-width:600px">
+      <div class="modal-content" style="max-width:600px;max-height:70vh;overflow-y:auto">
         <div class="modal-header">
           <h3 class="modal-title">{{ isEditing ? '编辑规则' : '新建规则' }}</h3>
           <button class="modal-close" @click="showModal = false">✕</button>
@@ -386,5 +386,76 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media screen and (max-width: 767px) {
+  .data-table {
+    display: block;
+    width: 100%;
+  }
+
+  .data-table thead {
+    display: none;
+  }
+
+  .data-table tbody {
+    display: block;
+  }
+
+  .data-table tr {
+    display: block;
+    margin-bottom: var(--spacing-md);
+    border: 1px solid #eee;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm);
+  }
+
+  .data-table td {
+    display: block;
+    border: none;
+    position: relative;
+    padding: 8px 8px 8px 50%;
+    white-space: normal;
+    text-align: right;
+    font-size: var(--font-size-xs);
+  }
+
+  .data-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 8px;
+    width: 45%;
+    font-weight: 500;
+    text-align: left;
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+  }
+
+  .data-table td.actions {
+    padding-left: 0;
+    text-align: center;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    border-bottom: none;
+  }
+
+  .data-table td.actions::before {
+    display: none;
+  }
+
+  .user-select-list {
+    max-height: 120px;
+  }
+
+  .modal-content {
+    max-width: 100% !important;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  img[style*="max-width:200px"] {
+    max-width: 100% !important;
+  }
 }
 </style>
