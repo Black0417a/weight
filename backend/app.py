@@ -37,7 +37,7 @@ def create_app():
     app.register_blueprint(reminder_bp, url_prefix='/api')
 
     with app.app_context():
-        from models import User, WeightRecord, UserGoal, Admin, RewardRule, SystemConfig, UserReminderSetting
+        from models import User, WeightRecord, UserGoal, Admin, RewardRule, UserReward, SystemConfig, UserReminderSetting
         db.create_all()
 
         if not SystemConfig.query.first():

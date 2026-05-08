@@ -1,10 +1,129 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
-from models import WeightRecord
-from datetime import datetime, date
+from models import WeightRecord, UserGoal, RewardRule, UserReward
+from datetime import datetime, date, timedelta
+import json
 
 weights_bp = Blueprint('weights', __name__)
+
+
+def check_goal_achievement(user_id, current_weight):
+    goal = UserGoal.query.filter_by(user_id=user_id).first()
+    if not goal:
+        return None
+
+    if current_weight > goal.target_weight:
+        return None
+
+    active_rules = RewardRule.query.filter_by(
+        condition_type='goal_achievement',
+        is_active=True
+    ).all()
+
+    rewards = []
+    for rule in active_rules:
+        target_users = json.loads(rule.target_users) if rule.target_users else 'all'
+        if target_users != 'all':
+            if str(user_id) not in [str(u) for u in target_users]:
+                continue
+
+        params = json.loads(rule.condition_params) if rule.condition_params else {}
+        required_percentage = float(params.get('percentage', 100))
+
+        if required_percentage > 100:
+            continue
+
+        existing = UserReward.query.filter_by(
+            user_id=user_id,
+            rule_id=rule.id
+        ).first()
+        if existing:
+            continue
+
+        reward = UserReward(
+            user_id=user_id,
+            rule_id=rule.id,
+            reward_type=rule.reward_type,
+            reward_content=rule.reward_content,
+            reward_image=rule.reward_image,
+            weight_value=current_weight,
+            target_weight=goal.target_weight,
+            is_read=False
+        )
+        db.session.add(reward)
+        rewards.append(reward)
+
+    if rewards:
+        db.session.flush()
+
+    return [r.to_dict() for r in rewards] if rewards else None
+
+
+def check_weight_change(user_id, current_weight, record_date):
+    active_rules = RewardRule.query.filter_by(
+        condition_type='weight_change',
+        is_active=True
+    ).all()
+
+    if not active_rules:
+        return None
+
+    rewards = []
+    for rule in active_rules:
+        target_users = json.loads(rule.target_users) if rule.target_users else 'all'
+        if target_users != 'all':
+            if str(user_id) not in [str(u) for u in target_users]:
+                continue
+
+        params = json.loads(rule.condition_params) if rule.condition_params else {}
+        days = int(params.get('days', 7))
+        weight_kg = float(params.get('weight_kg', 2))
+
+        if days <= 0 or weight_kg <= 0:
+            continue
+
+        lookback_date = record_date - timedelta(days=days)
+        old_records = WeightRecord.query.filter(
+            WeightRecord.user_id == user_id,
+            WeightRecord.record_date >= lookback_date,
+            WeightRecord.record_date < record_date
+        ).order_by(WeightRecord.record_date.asc()).all()
+
+        if not old_records:
+            continue
+
+        oldest_weight = old_records[0].weight
+        decrease = oldest_weight - current_weight
+
+        if decrease < weight_kg:
+            continue
+
+        existing = UserReward.query.filter_by(
+            user_id=user_id,
+            rule_id=rule.id,
+            weight_value=current_weight
+        ).first()
+        if existing:
+            continue
+
+        reward = UserReward(
+            user_id=user_id,
+            rule_id=rule.id,
+            reward_type=rule.reward_type,
+            reward_content=rule.reward_content,
+            reward_image=rule.reward_image,
+            weight_value=current_weight,
+            target_weight=decrease,
+            is_read=False
+        )
+        db.session.add(reward)
+        rewards.append(reward)
+
+    if rewards:
+        db.session.flush()
+
+    return [r.to_dict() for r in rewards] if rewards else None
 
 
 @weights_bp.route('/weights', methods=['GET'])
@@ -50,12 +169,28 @@ def create_weight():
     if existing:
         existing.weight = weight
         db.session.commit()
-        return jsonify({'message': '体重记录已更新', 'record': existing.to_dict()}), 200
+        goal_rewards = check_goal_achievement(user_id, weight)
+        change_rewards = check_weight_change(user_id, weight, record_date)
+        combined = (goal_rewards or []) + (change_rewards or [])
+        db.session.commit()
+        return jsonify({
+            'message': '体重记录已更新',
+            'record': existing.to_dict(),
+            'rewards': combined if combined else None
+        }), 200
 
     record = WeightRecord(user_id=user_id, weight=weight, record_date=record_date)
     db.session.add(record)
     db.session.commit()
-    return jsonify({'message': '体重记录已保存', 'record': record.to_dict()}), 201
+    goal_rewards = check_goal_achievement(user_id, weight)
+    change_rewards = check_weight_change(user_id, weight, record_date)
+    combined = (goal_rewards or []) + (change_rewards or [])
+    db.session.commit()
+    return jsonify({
+        'message': '体重记录已保存',
+        'record': record.to_dict(),
+        'rewards': combined if combined else None
+    }), 201
 
 
 @weights_bp.route('/weights/batch', methods=['POST'])
@@ -107,3 +242,32 @@ def delete_weight(record_id):
     db.session.delete(record)
     db.session.commit()
     return jsonify({'message': '记录已删除'}), 200
+
+
+@weights_bp.route('/rewards', methods=['GET'])
+@jwt_required()
+def get_rewards():
+    user_id = int(get_jwt_identity())
+    rewards = UserReward.query.filter_by(user_id=user_id).order_by(UserReward.created_at.desc()).all()
+    return jsonify([r.to_dict() for r in rewards]), 200
+
+
+@weights_bp.route('/rewards/unread-count', methods=['GET'])
+@jwt_required()
+def get_unread_reward_count():
+    user_id = int(get_jwt_identity())
+    count = UserReward.query.filter_by(user_id=user_id, is_read=False).count()
+    return jsonify({'count': count}), 200
+
+
+@weights_bp.route('/rewards/<int:reward_id>/read', methods=['PUT'])
+@jwt_required()
+def mark_reward_read(reward_id):
+    user_id = int(get_jwt_identity())
+    reward = UserReward.query.filter_by(id=reward_id, user_id=user_id).first()
+    if not reward:
+        return jsonify({'error': '奖励不存在'}), 404
+
+    reward.is_read = True
+    db.session.commit()
+    return jsonify({'message': '已标记为已读'}), 200

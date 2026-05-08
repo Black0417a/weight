@@ -62,6 +62,39 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showRewardModal" class="modal-overlay" @click.self="closeRewardModal">
+      <div class="reward-modal-content">
+        <div class="reward-modal-icon">🎉</div>
+        <h3 class="reward-modal-title">
+          <template v-if="activeReward.condition_type === 'weight_change'">
+            🏆 体重变化奖励达成！
+          </template>
+          <template v-else>
+            恭喜！目标达成！
+          </template>
+        </h3>
+        <p class="reward-modal-text">
+          <template v-if="activeReward.condition_type === 'weight_change'">
+            你成功减重了 <strong>{{ activeReward.target_weight }}kg</strong>，
+            当前体重 <strong>{{ activeReward.weight_value }}kg</strong>
+          </template>
+          <template v-else>
+            你当前的体重 <strong>{{ activeReward.weight_value }}kg</strong> 
+            已达到目标 <strong>{{ activeReward.target_weight }}kg</strong>！
+          </template>
+        </p>
+        <div v-if="activeReward.reward_type === 'image' && activeReward.reward_image" class="reward-image-wrap">
+          <img :src="getImageUrl(activeReward.reward_image)" class="reward-image" alt="奖励" />
+        </div>
+        <div v-if="activeReward.reward_content" class="reward-content-box">
+          {{ activeReward.reward_content }}
+        </div>
+        <button class="btn btn-primary reward-close-btn" @click="closeRewardModal">
+          太棒了！
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -80,6 +113,9 @@ const quickWeight = ref('')
 const quickError = ref('')
 const quickSuccess = ref('')
 const saving = ref(false)
+
+const showRewardModal = ref(false)
+const activeReward = ref({})
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
@@ -198,7 +234,7 @@ const handleQuickRecord = async () => {
 
   saving.value = true
   try {
-    await request.post('/weights', {
+    const res = await request.post('/weights', {
       weight: w,
       record_date: todayStr
     })
@@ -206,6 +242,11 @@ const handleQuickRecord = async () => {
     quickSuccess.value = '记录成功！'
     quickWeight.value = ''
     await fetchData()
+
+    if (res.rewards && res.rewards.length > 0) {
+      activeReward.value = res.rewards[0]
+      showRewardModal.value = true
+    }
 
     setTimeout(() => {
       quickSuccess.value = ''
@@ -240,6 +281,24 @@ const fetchData = async () => {
 watch([viewYear, viewMonth], fetchData)
 
 onMounted(fetchData)
+
+const closeRewardModal = async () => {
+  showRewardModal.value = false
+  if (activeReward.value.id) {
+    try {
+      await request.put(`/rewards/${activeReward.value.id}/read`)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+  activeReward.value = {}
+}
+
+const getImageUrl = (path) => {
+  if (!path) return ''
+  if (path.startsWith('http')) return path
+  return path
+}
 </script>
 
 <style scoped>
@@ -466,5 +525,73 @@ onMounted(fetchData)
   .calendar-day { min-height: 40px; }
   .day-num { font-size: 11px; }
   .day-weight { font-size: 10px; }
+}
+
+.reward-modal-content {
+    background: linear-gradient(135deg, #fff9e6, #fff3cd);
+    border-radius: 24px;
+    padding: 40px 32px 32px;
+    text-align: center;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    animation: rewardPop 0.4s ease;
+}
+
+@keyframes rewardPop {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.reward-modal-icon {
+    font-size: 64px;
+    margin-bottom: 12px;
+}
+
+.reward-modal-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 12px;
+}
+
+.reward-modal-text {
+    font-size: 15px;
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.reward-modal-text strong {
+    color: var(--color-primary);
+}
+
+.reward-image-wrap {
+    margin-bottom: 16px;
+}
+
+.reward-image {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 12px;
+}
+
+.reward-content-box {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    font-size: 15px;
+    color: #444;
+    line-height: 1.7;
+    white-space: pre-wrap;
+}
+
+.reward-close-btn {
+    padding: 12px 40px;
+    border-radius: 24px;
+    font-size: 16px;
+    font-weight: 600;
 }
 </style>

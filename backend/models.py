@@ -119,6 +119,46 @@ class UserReminderSetting(db.Model):
         }
 
 
+class UserReward(db.Model):
+    __tablename__ = 'user_rewards'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    rule_id = db.Column(db.Integer, db.ForeignKey('reward_rules.id'), nullable=False)
+    reward_type = db.Column(db.String(50), nullable=False)
+    reward_content = db.Column(db.Text, nullable=True)
+    reward_image = db.Column(db.String(500), nullable=True)
+    weight_value = db.Column(db.Float, nullable=True)
+    target_weight = db.Column(db.Float, nullable=True)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    rule = db.relationship('RewardRule', backref='user_rewards')
+
+    def to_dict(self):
+        rule_name = None
+        condition_type = None
+        try:
+            if self.rule:
+                rule_name = self.rule.name
+                condition_type = self.rule.condition_type
+        except Exception:
+            rule_name = None
+            condition_type = None
+        return {
+            'id': self.id,
+            'rule_id': self.rule_id,
+            'rule_name': rule_name,
+            'condition_type': condition_type,
+            'reward_type': self.reward_type,
+            'reward_content': self.reward_content,
+            'reward_image': self.reward_image,
+            'weight_value': self.weight_value,
+            'target_weight': self.target_weight,
+            'is_read': self.is_read,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
 class SystemConfig(db.Model):
     __tablename__ = 'system_configs'
     id = db.Column(db.Integer, primary_key=True)
