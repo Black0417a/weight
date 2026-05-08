@@ -1,25 +1,32 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import json
+
+def get_beijing_time():
+    utc_now = datetime.now(timezone.utc)
+    beijing_tz = timezone(timedelta(hours=8), 'Asia/Shanghai')
+    return utc_now.astimezone(beijing_tz)
 
 
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_beijing_time)
+    updated_at = db.Column(db.DateTime, default=get_beijing_time, onupdate=get_beijing_time)
 
     weight_records = db.relationship('WeightRecord', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     goal = db.relationship('UserGoal', backref='user', uselist=False, cascade='all, delete-orphan')
     reminder_setting = db.relationship('UserReminderSetting', backref='user', uselist=False, cascade='all, delete-orphan')
 
     def to_dict(self):
+        reminder_setting = self.reminder_setting
         return {
             'id': self.id,
             'email': self.email,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'record_count': self.weight_records.count()
+            'record_count': self.weight_records.count(),
+            'email_reminder_enabled': reminder_setting.email_reminder_enabled if reminder_setting else True
         }
 
 
@@ -29,7 +36,7 @@ class WeightRecord(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     weight = db.Column(db.Float, nullable=False)
     record_date = db.Column(db.Date, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_beijing_time)
 
     __table_args__ = (db.UniqueConstraint('user_id', 'record_date', name='uq_user_date'),)
 
@@ -47,7 +54,7 @@ class UserGoal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
     target_weight = db.Column(db.Float, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=get_beijing_time, onupdate=get_beijing_time)
 
     def to_dict(self):
         return {
@@ -63,7 +70,7 @@ class Admin(db.Model):
     username = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     is_active = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_beijing_time)
 
     def to_dict(self):
         return {
@@ -86,7 +93,7 @@ class RewardRule(db.Model):
     grant_mode = db.Column(db.String(50), nullable=False)
     target_users = db.Column(db.Text, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_beijing_time)
 
     def to_dict(self):
         return {
@@ -109,7 +116,7 @@ class UserReminderSetting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
     email_reminder_enabled = db.Column(db.Boolean, default=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=get_beijing_time, onupdate=get_beijing_time)
 
     def to_dict(self):
         return {
@@ -130,7 +137,7 @@ class UserReward(db.Model):
     weight_value = db.Column(db.Float, nullable=True)
     target_weight = db.Column(db.Float, nullable=True)
     is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_beijing_time)
 
     rule = db.relationship('RewardRule', backref='user_rewards')
 

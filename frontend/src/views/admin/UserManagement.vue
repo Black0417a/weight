@@ -13,6 +13,7 @@
             <th>邮箱</th>
             <th>记录数</th>
             <th>注册时间</th>
+            <th>邮件提醒</th>
             <th>操作</th>
           </tr>
         </thead>
@@ -22,13 +23,19 @@
             <td data-label="邮箱">{{ u.email }}</td>
             <td data-label="记录数">{{ u.record_count }}</td>
             <td data-label="注册时间">{{ u.created_at ? new Date(u.created_at).toLocaleDateString('zh-CN') : '-' }}</td>
+            <td data-label="邮件提醒">
+              <label class="toggle-switch">
+                <input type="checkbox" :checked="u.email_reminder_enabled" @change="toggleEmailReminder(u)" />
+                <span class="slider"></span>
+              </label>
+            </td>
             <td data-label="操作" class="actions">
               <button class="btn btn-sm btn-secondary" @click="showDetail(u)">详情</button>
               <button class="btn btn-sm btn-delete" @click="handleDelete(u)">删除</button>
             </td>
           </tr>
           <tr v-if="users.length === 0">
-            <td colspan="5" class="empty-cell">暂无数据</td>
+            <td colspan="6" class="empty-cell">暂无数据</td>
           </tr>
         </tbody>
       </table>
@@ -104,10 +111,72 @@ const handleDelete = async (user) => {
   } catch (err) { alert('删除失败') }
 }
 
+const toggleEmailReminder = async (user) => {
+  const originalState = user.email_reminder_enabled
+  try {
+    // 先临时更新UI
+    user.email_reminder_enabled = !originalState
+    const res = await request.put(`/admin/users/${user.id}/email-reminder`, {
+      enabled: user.email_reminder_enabled
+    })
+    // 用API返回的状态确认
+    user.email_reminder_enabled = res.email_reminder_enabled
+  } catch (err) {
+    // 出错时恢复原状
+    user.email_reminder_enabled = originalState
+    alert('设置失败')
+  }
+}
+
 onMounted(fetchUsers)
 </script>
 
 <style scoped>
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #4CAF50;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
 .toolbar {
   display: flex;
   gap: var(--spacing-sm);
@@ -206,6 +275,15 @@ onMounted(fetchUsers)
 
   .data-table td.actions::before {
     display: none;
+  }
+
+  .data-table td:nth-child(5) {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .data-table td:nth-child(5)::before {
+    top: 8px;
   }
 
   .toolbar {

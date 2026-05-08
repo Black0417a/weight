@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, send_from_directory, current_app
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from app import db
-from models import Admin, User, WeightRecord, RewardRule, SystemConfig, UserReward
+from models import Admin, User, WeightRecord, RewardRule, SystemConfig, UserReward, UserReminderSetting
 from datetime import timedelta
 from sqlalchemy.orm import joinedload
 import bcrypt
@@ -141,7 +141,7 @@ def get_users():
     per_page = request.args.get('per_page', 20, type=int)
     search = request.args.get('search', '', type=str)
 
-    query = User.query
+    query = User.query.options(db.joinedload(User.reminder_setting))
     if search:
         query = query.filter(User.email.contains(search))
 
@@ -158,7 +158,7 @@ def get_users():
 @admin_bp.route('/users/<int:user_id>', methods=['GET'])
 @admin_required()
 def get_user_detail(user_id):
-    user = User.query.get(user_id)
+    user = User.query.options(db.joinedload(User.reminder_setting)).get(user_id)
     if not user:
         return jsonify({'error': '用户不存在'}), 404
 
@@ -181,6 +181,31 @@ def delete_user(user_id):
     db.session.delete(user)
     db.session.commit()
     return jsonify({'message': '用户已删除'}), 200
+
+
+@admin_bp.route('/users/<int:user_id>/email-reminder', methods=['PUT'])
+@admin_required()
+def toggle_user_email_reminder(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': '用户不存在'}), 404
+
+    data = request.get_json()
+    enabled = data.get('enabled', True)
+
+    # 查找或创建用户提醒设置
+    reminder_setting = UserReminderSetting.query.filter_by(user_id=user_id).first()
+    if not reminder_setting:
+        reminder_setting = UserReminderSetting(user_id=user_id, email_reminder_enabled=enabled)
+        db.session.add(reminder_setting)
+    else:
+        reminder_setting.email_reminder_enabled = enabled
+
+    db.session.commit()
+    return jsonify({
+        'message': '邮件提醒设置已更新',
+        'email_reminder_enabled': reminder_setting.email_reminder_enabled
+    }), 200
 
 
 @admin_bp.route('/reward-rules', methods=['GET'])

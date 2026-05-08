@@ -2,7 +2,13 @@ import smtplib
 from email.header import Header
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
+
+def get_beijing_today():
+    utc_now = datetime.now(timezone.utc)
+    beijing_tz = timezone(timedelta(hours=8), 'Asia/Shanghai')
+    beijing_now = utc_now.astimezone(beijing_tz)
+    return beijing_now.date()
 
 
 def send_reminder_email(to_email, user_name='用户', config=None):
@@ -63,7 +69,7 @@ def check_and_send_reminders(app=None):
         from models import User, UserReminderSetting, WeightRecord
         from app import db
 
-        today = date.today()
+        today = get_beijing_today()
 
         reminders = UserReminderSetting.query.filter_by(email_reminder_enabled=True).all()
 
