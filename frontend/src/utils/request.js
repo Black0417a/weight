@@ -12,7 +12,9 @@ request.interceptors.request.use(
   (config) => {
     const userToken = localStorage.getItem('user_token')
     const adminToken = localStorage.getItem('admin_token')
-    if (userToken) {
+    if (config.url && config.url.includes('/admin/') && adminToken) {
+      config.headers.Authorization = `Bearer ${adminToken}`
+    } else if (userToken) {
       config.headers.Authorization = `Bearer ${userToken}`
     } else if (adminToken) {
       config.headers.Authorization = `Bearer ${adminToken}`

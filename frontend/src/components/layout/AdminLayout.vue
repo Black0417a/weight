@@ -16,6 +16,9 @@
         <router-link to="/admin/reward-rules" class="sidebar-link" @click="showSidebar = false">
           <span>🎁</span> 奖励规则
         </router-link>
+        <router-link to="/admin/reward-records" class="sidebar-link" @click="showSidebar = false">
+          <span>📨</span> 奖励记录
+        </router-link>
         <router-link to="/admin/config" class="sidebar-link" @click="showSidebar = false">
           <span>🔧</span> 系统设置
         </router-link>

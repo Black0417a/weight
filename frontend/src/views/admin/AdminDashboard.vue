@@ -17,6 +17,11 @@
         <p class="stat-value">{{ stats.active_rule_count }}</p>
         <p class="stat-label">活跃规则</p>
       </div>
+      <div class="card stat-card">
+        <p class="stat-icon">📨</p>
+        <p class="stat-value">{{ stats.reward_count }}</p>
+        <p class="stat-label">奖励推送</p>
+      </div>
     </div>
   </div>
 </template>
@@ -25,7 +30,7 @@
 import { ref, onMounted } from 'vue'
 import request from '@/utils/request'
 
-const stats = ref({ user_count: 0, record_count: 0, active_rule_count: 0 })
+const stats = ref({ user_count: 0, record_count: 0, active_rule_count: 0, reward_count: 0 })
 
 const fetchStats = async () => {
   try {
@@ -40,7 +45,7 @@ onMounted(fetchStats)
 <style scoped>
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--spacing-lg);
 }
 
@@ -54,6 +59,10 @@ onMounted(fetchStats)
 .stat-label { font-size: var(--font-size-sm); color: var(--text-light); margin-top: var(--spacing-xs); }
 
 @media screen and (max-width: 767px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media screen and (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
 }
 </style>

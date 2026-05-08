@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify, send_from_directory, current_app
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from app import db
-from models import Admin, User, WeightRecord, RewardRule, SystemConfig
+from models import Admin, User, WeightRecord, RewardRule, SystemConfig, UserReward
 from datetime import timedelta
+from sqlalchemy.orm import joinedload
 import bcrypt
 import json
 import os
@@ -319,15 +320,82 @@ def update_config(key):
     return jsonify({'message': '配置已更新', 'config': config.to_dict()}), 200
 
 
+@admin_bp.route('/reward-push-records', methods=['GET'])
+@admin_required()
+def get_reward_push_records():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    search = request.args.get('search', '', type=str)
+    filter_rule_id = request.args.get('rule_id', None, type=int)
+    filter_read = request.args.get('is_read', None, type=str)
+    filter_type = request.args.get('condition_type', '', type=str)
+
+    query = UserReward.query.options(joinedload(UserReward.rule))
+
+    if search:
+        query = query.join(User, UserReward.user_id == User.id).filter(
+            User.email.contains(search)
+        ).reset_joinpoint()
+
+    if filter_rule_id:
+        query = query.filter(UserReward.rule_id == filter_rule_id)
+    if filter_read == 'read':
+        query = query.filter(UserReward.is_read == True)
+    elif filter_read == 'unread':
+        query = query.filter(UserReward.is_read == False)
+    if filter_type:
+        query = query.join(RewardRule, UserReward.rule_id == RewardRule.id).filter(
+            RewardRule.condition_type == filter_type
+        ).reset_joinpoint()
+
+    pagination = query.order_by(UserReward.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+
+    records = []
+    user_ids = list(set(r.user_id for r in pagination.items))
+    users_map = {u.id: u.email for u in User.query.filter(User.id.in_(user_ids)).all()} if user_ids else {}
+    for reward in pagination.items:
+        item = reward.to_dict()
+        item['user_email'] = users_map.get(reward.user_id, '未知用户')
+        records.append(item)
+
+    rules = RewardRule.query.all()
+
+    return jsonify({
+        'records': records,
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': page,
+        'rules': [{'id': r.id, 'name': r.name} for r in rules]
+    }), 200
+
+
+@admin_bp.route('/reward-push-records/stats', methods=['GET'])
+@admin_required()
+def reward_push_stats():
+    total_pushed = UserReward.query.count()
+    unread_count = UserReward.query.filter_by(is_read=False).count()
+    read_count = UserReward.query.filter_by(is_read=True).count()
+
+    return jsonify({
+        'total_pushed': total_pushed,
+        'unread_count': unread_count,
+        'read_count': read_count
+    }), 200
+
+
 @admin_bp.route('/dashboard/stats', methods=['GET'])
 @admin_required()
 def dashboard_stats():
     user_count = User.query.count()
     record_count = WeightRecord.query.count()
     active_rule_count = RewardRule.query.filter_by(is_active=True).count()
+    reward_count = UserReward.query.count()
 
     return jsonify({
         'user_count': user_count,
         'record_count': record_count,
         'active_rule_count': active_rule_count,
+        'reward_count': reward_count,
     }), 200

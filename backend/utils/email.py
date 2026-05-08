@@ -1,4 +1,5 @@
 import smtplib
+from email.header import Header
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import date
@@ -11,8 +12,9 @@ def send_reminder_email(to_email, user_name='用户', config=None):
     smtp_pass = config['SMTP_PASS']
 
     msg = MIMEMultipart('alternative')
-    msg['Subject'] = '别忘了今天的称重哦~'
-    msg['From'] = f'体重记录小助手 <{smtp_user}>'
+    msg['Subject'] = Header('别忘了今天的称重哦~', 'utf-8')
+    form_name = Header("体重记录小助手", "utf-8").encode()
+    msg['From'] = f'{form_name} <{smtp_user}>'
     msg['To'] = to_email
 
     html_content = f'''

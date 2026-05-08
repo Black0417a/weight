@@ -74,6 +74,12 @@ const routes = [
         meta: { title: '奖励规则' }
       },
       {
+        path: 'reward-records',
+        name: 'RewardPushRecords',
+        component: () => import('@/views/admin/RewardPushRecords.vue'),
+        meta: { title: '奖励记录' }
+      },
+      {
         path: 'config',
         name: 'SystemConfig',
         component: () => import('@/views/admin/SystemConfig.vue'),
