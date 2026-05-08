@@ -43,14 +43,6 @@ echo "  服务已启动！"
 echo "========================================"
 
 echo ""
-echo "访问地址:"
-echo "  http://你的域名/weight/"
-
-echo ""
-echo "API:"
-echo "  http://你的域名/weight/api/"
-
-echo ""
 echo "日志文件:"
 echo "  后端: logs/backend.log"
 
