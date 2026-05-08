@@ -18,7 +18,12 @@ echo "正在启动后端服务..."
 
 cd backend
 
-nohup gunicorn -w 4 -b 127.0.0.1:6000 run:app \
+nohup gunicorn \
+-w 4 \
+-b 127.0.0.1:6000 \
+--forwarded-allow-ips="*" \
+--proxy-protocol \
+run:app
 > ../logs/backend.log 2>&1 &
 
 BACKEND_PID=$!
