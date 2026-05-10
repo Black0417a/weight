@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from werkzeug.middleware.proxy_fix import ProxyFix
 from config import Config
 import os
@@ -52,9 +53,7 @@ def create_app():
         if not scheduler.running:
             scheduler.add_job(
                 func=lambda: check_and_send_reminders(app),
-                trigger='cron',
-                hour=20,
-                minute=0,
+                trigger=CronTrigger(hour=20, minute=0, timezone='Asia/Shanghai'),
                 id='weight_reminder'
             )
             scheduler.start()

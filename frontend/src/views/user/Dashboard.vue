@@ -101,13 +101,14 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import request from '@/utils/request'
+import { getBeijingToday, formatDateStr } from '@/utils/date'
 
-const today = new Date()
-const todayStr = today.toISOString().split('T')[0]
+const todayStr = getBeijingToday()
+const [todayY, todayM] = todayStr.split('-').map(Number)
 const records = ref([])
 const goal = ref(null)
-const viewYear = ref(today.getFullYear())
-const viewMonth = ref(today.getMonth())
+const viewYear = ref(todayY)
+const viewMonth = ref(todayM - 1)
 
 const quickWeight = ref('')
 const quickError = ref('')
@@ -158,7 +159,7 @@ const calendarDays = computed(() => {
 
   for (let i = 0; i < startWeekday; i++) {
     const prevDate = new Date(year, month, -startWeekday + i + 1)
-    const dateStr = prevDate.toISOString().split('T')[0]
+    const dateStr = formatDateStr(prevDate.getFullYear(), prevDate.getMonth(), prevDate.getDate())
     days.push({
       date: prevDate,
       dateStr,
@@ -171,7 +172,7 @@ const calendarDays = computed(() => {
 
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(year, month, d)
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = formatDateStr(year, month, d)
     days.push({
       date,
       dateStr,
@@ -185,7 +186,7 @@ const calendarDays = computed(() => {
   const remaining = 42 - days.length
   for (let i = 1; i <= remaining; i++) {
     const nextDate = new Date(year, month + 1, i)
-    const dateStr = nextDate.toISOString().split('T')[0]
+    const dateStr = formatDateStr(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate())
     days.push({
       date: nextDate,
       dateStr,
@@ -262,8 +263,8 @@ const fetchData = async () => {
   try {
     const startDate = new Date(viewYear.value, viewMonth.value - 1, 1)
     const endDate = new Date(viewYear.value, viewMonth.value + 2, 0)
-    const start = startDate.toISOString().split('T')[0]
-    const end = endDate.toISOString().split('T')[0]
+    const start = formatDateStr(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
+    const end = formatDateStr(endDate.getFullYear(), endDate.getMonth(), endDate.getDate())
 
     const [res, goalRes] = await Promise.all([
       request.get('/weights', { params: { start_date: start, end_date: end } }),

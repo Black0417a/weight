@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
-from models import WeightRecord, UserGoal, RewardRule, UserReward
-from datetime import datetime, date, timedelta
+from models import WeightRecord, UserGoal, RewardRule, UserReward, get_beijing_time
+from datetime import datetime, timedelta
 import json
 
 weights_bp = Blueprint('weights', __name__)
@@ -162,7 +162,7 @@ def create_weight():
     except ValueError:
         return jsonify({'error': '日期格式不正确，应为YYYY-MM-DD'}), 400
 
-    if record_date > date.today():
+    if record_date > get_beijing_time().date():
         return jsonify({'error': '不能选择未来日期'}), 400
 
     existing = WeightRecord.query.filter_by(user_id=user_id, record_date=record_date).first()
@@ -213,7 +213,7 @@ def batch_create_weights():
             if weight <= 0 or weight > 500:
                 continue
             record_date = datetime.strptime(item['record_date'], '%Y-%m-%d').date()
-            if record_date > date.today():
+            if record_date > get_beijing_time().date():
                 continue
 
             existing = WeightRecord.query.filter_by(user_id=user_id, record_date=record_date).first()

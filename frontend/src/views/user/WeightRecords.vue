@@ -65,8 +65,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import request from '@/utils/request'
+import { getBeijingToday } from '@/utils/date'
 
-const today = new Date().toISOString().split('T')[0]
+const today = getBeijingToday()
 const records = ref([])
 const loading = ref(true)
 const showModal = ref(false)
@@ -82,7 +83,7 @@ const formatDate = (d) => {
 
 const getWeekday = (d) => {
   const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-  const date = new Date(d)
+  const date = new Date(d + 'T00:00:00+08:00')
   return days[date.getDay()]
 }
 

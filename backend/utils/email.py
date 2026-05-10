@@ -2,13 +2,12 @@ import smtplib
 from email.header import Header
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import date, datetime, timedelta, timezone
+
+from models import get_beijing_time
+
 
 def get_beijing_today():
-    utc_now = datetime.now(timezone.utc)
-    beijing_tz = timezone(timedelta(hours=8), 'Asia/Shanghai')
-    beijing_now = utc_now.astimezone(beijing_tz)
-    return beijing_now.date()
+    return get_beijing_time().date()
 
 
 def send_reminder_email(to_email, user_name='用户', config=None):

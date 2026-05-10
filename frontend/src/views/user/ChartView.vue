@@ -47,6 +47,7 @@
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import request from '@/utils/request'
 import * as echarts from 'echarts'
+import { getBeijingToday, formatDateStr } from '@/utils/date'
 
 const chartRef = ref(null)
 let chartInstance = null
@@ -70,19 +71,20 @@ const periods = [
 ]
 
 const computeDateRange = (p) => {
-  const today = new Date()
-  const endDate = today.toISOString().split('T')[0]
-  const startDate = new Date(today)
+  const beijingToday = getBeijingToday()
+  const [y, m, d] = beijingToday.split('-').map(Number)
+  const startDate = new Date(y, m - 1, d)
 
   if (p === 'week') {
-    startDate.setDate(today.getDate() - 7)
+    startDate.setDate(startDate.getDate() - 7)
   } else if (p === 'month') {
-    startDate.setMonth(today.getMonth() - 1)
+    startDate.setMonth(startDate.getMonth() - 1)
   } else if (p === 'quarter') {
-    startDate.setMonth(today.getMonth() - 3)
+    startDate.setMonth(startDate.getMonth() - 3)
   }
 
-  return { start: startDate.toISOString().split('T')[0], end: endDate }
+  const start = formatDateStr(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
+  return { start, end: beijingToday }
 }
 
 const fetchData = async () => {
