@@ -7,6 +7,11 @@
         <span class="today-weight">{{ displayWeight }}</span>
         <span class="today-unit">kg</span>
       </div>
+      <div v-if="bmi !== null" class="today-bmi-row">
+        <span class="bmi-label">BMI</span>
+        <span class="bmi-value">{{ bmi }}</span>
+        <span class="bmi-cat">{{ bmiCategory }}</span>
+      </div>
       <div v-if="goal" class="today-goal-row">
         <span class="goal-hint">🎯 目标 {{ goal.target_weight }}kg</span>
         <span v-if="displayWeight !== '--'" class="goal-remain">
@@ -118,6 +123,8 @@ const saving = ref(false)
 const showRewardModal = ref(false)
 const activeReward = ref({})
 
+const userProfile = ref({})
+
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
 const isToday = computed(() => {
@@ -133,6 +140,27 @@ const displayDate = computed(() => {
 const displayWeight = computed(() => {
   if (records.value.length === 0) return '--'
   return records.value[records.value.length - 1].weight
+})
+
+const latestWeight = computed(() => {
+  if (records.value.length === 0) return null
+  return parseFloat(records.value[records.value.length - 1].weight)
+})
+
+const bmi = computed(() => {
+  const h = userProfile.value.height
+  const w = latestWeight.value
+  if (!h || !w) return null
+  return (w / ((h / 100) ** 2)).toFixed(1)
+})
+
+const bmiCategory = computed(() => {
+  const val = parseFloat(bmi.value)
+  if (isNaN(val)) return ''
+  if (val < 18.5) return '偏瘦'
+  if (val < 24) return '正常'
+  if (val < 28) return '偏胖'
+  return '肥胖'
 })
 
 const calendarTitle = computed(() => {
@@ -266,14 +294,17 @@ const fetchData = async () => {
     const start = formatDateStr(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
     const end = formatDateStr(endDate.getFullYear(), endDate.getMonth(), endDate.getDate())
 
-    const [res, goalRes] = await Promise.all([
+    const [res, goalRes, profileRes] = await Promise.all([
       request.get('/weights', { params: { start_date: start, end_date: end } }),
-      request.get('/goal')
+      request.get('/goal'),
+      request.get('/auth/profile')
     ])
     records.value = res
     if (goalRes.target_weight) {
       goal.value = goalRes
     }
+    userProfile.value = profileRes
+    localStorage.setItem('user_info', JSON.stringify(profileRes))
   } catch (err) {
     console.error(err)
   }
@@ -349,6 +380,33 @@ const getImageUrl = (path) => {
   gap: var(--spacing-lg);
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
+}
+
+.today-bmi-row {
+  margin-top: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+
+.bmi-label {
+  color: var(--text-light);
+}
+
+.bmi-value {
+  font-weight: 700;
+  color: var(--color-secondary);
+  font-size: var(--font-size-lg);
+}
+
+.bmi-cat {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
 }
 
 .goal-remain {

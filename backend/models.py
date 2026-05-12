@@ -12,6 +12,8 @@ class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    height = db.Column(db.Float, nullable=True)
+    birthday = db.Column(db.Date, nullable=True)
     created_at = db.Column(db.DateTime, default=get_beijing_time)
     updated_at = db.Column(db.DateTime, default=get_beijing_time, onupdate=get_beijing_time)
 
@@ -24,6 +26,8 @@ class User(db.Model):
         return {
             'id': self.id,
             'email': self.email,
+            'height': self.height,
+            'birthday': self.birthday.isoformat() if self.birthday else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'record_count': self.weight_records.count(),
             'email_reminder_enabled': reminder_setting.email_reminder_enabled if reminder_setting else True

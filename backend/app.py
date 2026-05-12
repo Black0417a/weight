@@ -2,6 +2,7 @@ from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect, text
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -40,6 +41,14 @@ def create_app():
     with app.app_context():
         from models import User, WeightRecord, UserGoal, Admin, RewardRule, UserReward, SystemConfig, UserReminderSetting
         db.create_all()
+
+        inspector = inspect(db.engine)
+        existing_cols = [col['name'] for col in inspector.get_columns('users')]
+        if 'height' not in existing_cols:
+            db.session.execute(text('ALTER TABLE users ADD COLUMN height FLOAT'))
+        if 'birthday' not in existing_cols:
+            db.session.execute(text('ALTER TABLE users ADD COLUMN birthday DATE'))
+        db.session.commit()
 
         if not SystemConfig.query.first():
             defaults = [
