@@ -44,8 +44,9 @@
           type="date"
           v-model="editBirthday"
           class="form-input"
+          pattern="\d{4}-\d{2}-\d{2}"
         />
-        <p v-else class="form-value">{{ birthday || '未填写' }}</p>
+        <p v-else class="form-value">{{ displayBirthday || '未填写' }}</p>
       </div>
       <div v-if="computedAge !== null" class="age-display">
         年龄：<strong>{{ computedAge }}</strong> 岁
@@ -98,8 +99,19 @@ const savingProfile = ref(false)
 const profileMsg = ref('')
 const profileError = ref(false)
 
+const formatDateDisplay = (dateStr) => {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 const displayBirthday = computed(() => {
-  return isEditing.value ? editBirthday.value : birthday.value
+  const val = isEditing.value ? editBirthday.value : birthday.value
+  return formatDateDisplay(val)
 })
 
 const computedAge = computed(() => {
@@ -216,17 +228,16 @@ onMounted(fetchData)
 }
 
 .edit-btn {
-  padding: 4px 14px;
-  border-radius: var(--radius-full);
+  padding: 4px 8px;
   font-size: var(--font-size-xs);
-  background: var(--color-primary-light);
   color: var(--color-primary);
+  background: transparent;
   border: none;
+  cursor: pointer;
 }
 
 .edit-btn:hover {
-  background: var(--color-primary);
-  color: white;
+  text-decoration: underline;
 }
 
 .form-group {
