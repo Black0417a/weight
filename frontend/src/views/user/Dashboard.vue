@@ -41,40 +41,27 @@
       </div>
     </div>
 
-    <div v-if="rewardProgress.length > 0" class="card reward-progress-card">
-      <div
-        v-for="rp in rewardProgress"
-        :key="rp.rule_id"
-        class="reward-progress-item"
-      >
-        <div class="rp-header">
-          <span class="rp-icon">🎁</span>
-          <div class="rp-title-wrap">
-            <p class="rp-title">神秘奖励挑战</p>
-            <p class="rp-subtitle">{{ rp.claimed ? '奖励已解锁' : '达成目标体重即可解锁神秘奖励' }}</p>
-          </div>
-          <span v-if="rp.claimed" class="rp-tag rp-tag-done">已解锁</span>
-          <span v-else class="rp-tag rp-tag-progress">进行中</span>
-        </div>
-        <div class="rp-bar-wrap">
-          <div class="rp-bar">
-            <div class="rp-bar-fill" :style="{ width: rp.progress + '%' }"></div>
-          </div>
-          <span class="rp-bar-percent">{{ rp.progress }}%</span>
-        </div>
-        <div class="rp-stats">
-          <span v-if="rp.current_weight !== null" class="rp-stat">
-            当前 <strong>{{ rp.current_weight }}</strong>kg
-          </span>
-          <span class="rp-stat rp-stat-target">
-            目标 <strong>{{ rp.target_weight }}</strong>kg
-          </span>
-          <span v-if="!rp.claimed && rp.remaining !== null" class="rp-stat rp-stat-remain">
-            还差 <strong>{{ rp.remaining }}</strong>kg
-          </span>
-        </div>
-        <p v-if="!rp.claimed" class="rp-hint">奖励内容将在达成后揭晓 ✨</p>
+    <div v-if="displayedReward" class="card reward-progress-card">
+      <div class="rp-top">
+        <span class="rp-icon">🎁</span>
+        <span class="rp-title">神秘奖励</span>
+        <span class="rp-tag" :class="displayedReward.claimed ? 'rp-tag-done' : 'rp-tag-progress'">
+          {{ displayedReward.claimed ? '已解锁' : '进行中' }}
+        </span>
+        <span class="rp-meta">
+          目标 <strong>{{ displayedReward.target_weight }}</strong>kg
+          <template v-if="!displayedReward.claimed && displayedReward.remaining !== null">
+            · 还差 <strong>{{ displayedReward.remaining }}</strong>kg
+          </template>
+        </span>
       </div>
+      <div class="rp-bar-wrap">
+        <div class="rp-bar">
+          <div class="rp-bar-fill" :style="{ width: displayedReward.progress + '%' }"></div>
+        </div>
+        <span class="rp-bar-percent">{{ displayedReward.progress }}%</span>
+      </div>
+      <p v-if="!displayedReward.claimed" class="rp-hint">达成后揭晓奖励 ✨</p>
     </div>
 
     <div class="card calendar-card">
@@ -163,6 +150,17 @@ const showRewardModal = ref(false)
 const activeReward = ref({})
 
 const rewardProgress = ref([])
+
+const displayedReward = computed(() => {
+  const unclaimed = rewardProgress.value.filter(r => !r.claimed)
+  if (unclaimed.length === 0) return null
+  const sorted = [...unclaimed].sort((a, b) => {
+    const ra = a.remaining === null ? Infinity : a.remaining
+    const rb = b.remaining === null ? Infinity : b.remaining
+    return ra - rb
+  })
+  return sorted[0]
+})
 
 const userProfile = ref({})
 
@@ -533,49 +531,33 @@ const getImageUrl = (path) => {
 }
 
 .reward-progress-card {
-  padding: var(--spacing-md) var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
+  padding: 10px 14px;
+  margin-bottom: var(--spacing-sm);
   background: linear-gradient(135deg, #fffaf0, #fff3e0);
 }
 
-.reward-progress-item + .reward-progress-item {
-  margin-top: var(--spacing-md);
-  padding-top: var(--spacing-md);
-  border-top: 1px dashed rgba(255, 152, 0, 0.25);
-}
-
-.rp-header {
+.rp-top {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
 }
 
 .rp-icon {
-  font-size: 28px;
+  font-size: 18px;
   line-height: 1;
 }
 
-.rp-title-wrap {
-  flex: 1;
-}
-
 .rp-title {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0;
-}
-
-.rp-subtitle {
-  font-size: var(--font-size-xs);
-  color: var(--text-light);
-  margin: 2px 0 0;
 }
 
 .rp-tag {
-  font-size: var(--font-size-xs);
-  padding: 3px 10px;
+  font-size: 11px;
+  padding: 2px 8px;
   border-radius: var(--radius-full);
   white-space: nowrap;
 }
@@ -590,16 +572,26 @@ const getImageUrl = (path) => {
   color: #155724;
 }
 
+.rp-meta {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.rp-meta strong {
+  color: #e65100;
+  font-weight: 700;
+}
+
 .rp-bar-wrap {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
+  gap: 8px;
 }
 
 .rp-bar {
   flex: 1;
-  height: 12px;
+  height: 6px;
   background: #ffe0b2;
   border-radius: var(--radius-full);
   overflow: hidden;
@@ -613,38 +605,17 @@ const getImageUrl = (path) => {
 }
 
 .rp-bar-percent {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: #e65100;
-  min-width: 42px;
+  min-width: 34px;
   text-align: right;
 }
 
-.rp-stats {
-  display: flex;
-  gap: var(--spacing-md);
-  flex-wrap: wrap;
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-}
-
-.rp-stat strong {
-  color: var(--color-primary);
-  font-weight: 700;
-}
-
-.rp-stat-target strong {
-  color: #e65100;
-}
-
-.rp-stat-remain strong {
-  color: var(--color-secondary);
-}
-
 .rp-hint {
-  font-size: var(--font-size-xs);
+  font-size: 11px;
   color: var(--text-light);
-  margin: 6px 0 0;
+  margin: 4px 0 0;
 }
 
 .calendar-header {
@@ -747,15 +718,20 @@ const getImageUrl = (path) => {
 }
 
 @media screen and (max-width: 767px) {
-  .today-card { padding: var(--spacing-lg); }
-  .today-weight { font-size: 44px; }
+  .today-card { padding: var(--spacing-md) var(--spacing-sm); }
+  .today-weight { font-size: 40px; }
+  .today-label { margin-bottom: 2px; }
+  .today-date { margin-bottom: var(--spacing-sm); }
+  .today-goal-row { margin-top: var(--spacing-sm); }
+  .quick-record { margin-top: var(--spacing-sm); padding-top: var(--spacing-sm); }
   .quick-input { width: 120px; padding: 8px 12px; font-size: var(--font-size-sm); }
   .quick-btn { padding: 8px 16px; }
-  .calendar-day { min-height: 40px; }
+  .calendar-card { padding: var(--spacing-sm); }
+  .calendar-day { min-height: 36px; }
   .day-num { font-size: 11px; }
   .day-weight { font-size: 10px; }
-  .reward-progress-card { padding: var(--spacing-sm) var(--spacing-md); }
-  .rp-stats { gap: var(--spacing-sm); }
+  .reward-progress-card { padding: 8px 12px; margin-bottom: var(--spacing-sm); }
+  .rp-top { gap: 6px; margin-bottom: 6px; }
 }
 
 .reward-modal-content {
