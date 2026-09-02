@@ -48,26 +48,12 @@
         </div>
         <div class="form-group">
           <label>条件类型</label>
-          <select v-model="form.condition_type" class="input-field">
-            <option value="target_weight">目标体重达成</option>
-            <option value="weight_change">体重变化幅度</option>
-            <option value="goal_achievement">目标达成率</option>
-          </select>
+          <div class="condition-type-box">目标体重达成</div>
         </div>
-        <div class="form-group" v-if="form.condition_type === 'target_weight'">
+        <div class="form-group">
           <label>目标体重 (kg)</label>
           <input v-model.number="form.condition_params.target_weight" type="number" step="0.1" class="input-field" placeholder="如 65" />
           <p class="form-hint">用户体重达到此值即可领取奖励，奖励内容对用户隐藏直至达成</p>
-        </div>
-        <div class="form-group" v-if="form.condition_type === 'weight_change'">
-          <label>减重阈值 (天数)</label>
-          <input v-model.number="form.condition_params.days" type="number" class="input-field" placeholder="如 7" />
-          <label style="margin-top:8px">减重阈值 (kg)</label>
-          <input v-model.number="form.condition_params.weight_kg" type="number" step="0.1" class="input-field" placeholder="如 2" />
-        </div>
-        <div class="form-group" v-if="form.condition_type === 'goal_achievement'">
-          <label>达成率 (%)</label>
-          <input v-model.number="form.condition_params.percentage" type="number" class="input-field" placeholder="如 80" />
         </div>
         <div class="form-group">
           <label>奖励类型</label>
@@ -213,10 +199,12 @@ const openCreate = () => {
 const openEdit = async (rule) => {
   isEditing.value = true
   editingId.value = rule.id
+  const params = { ...rule.condition_params }
+  if (!params.target_weight) params.target_weight = 65
   form.value = {
     name: rule.name,
-    condition_type: rule.condition_type,
-    condition_params: { ...rule.condition_params },
+    condition_type: 'target_weight',
+    condition_params: params,
     reward_type: rule.reward_type,
     reward_content: rule.reward_content || '',
     reward_image: rule.reward_image || null,
@@ -266,7 +254,7 @@ const handleSave = async () => {
 
     const payload = {
       name: form.value.name,
-      condition_type: form.value.condition_type,
+      condition_type: 'target_weight',
       condition_params: form.value.condition_params,
       reward_type: form.value.reward_type,
       reward_content: form.value.reward_content,
@@ -342,6 +330,16 @@ onMounted(() => {
 .error-msg { color: var(--color-danger); font-size: var(--font-size-xs); margin-bottom: var(--spacing-sm); }
 
 .form-hint { color: var(--text-light); font-size: var(--font-size-xs); margin-top: 6px; line-height: 1.5; }
+
+.condition-type-box {
+  padding: 10px 14px;
+  background: var(--bg-primary);
+  border: 2px solid #ffe0e0;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+}
 
 .user-select-box {
   border: 2px solid #ffe0e0;
