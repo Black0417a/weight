@@ -43,8 +43,6 @@
 
     <div v-if="displayedReward" class="card reward-progress-card">
       <div class="rp-top">
-        <span class="rp-icon">🎁</span>
-        <span class="rp-title">神秘奖励</span>
         <span class="rp-tag" :class="displayedReward.claimed ? 'rp-tag-done' : 'rp-tag-progress'">
           {{ displayedReward.claimed ? '已解锁' : '进行中' }}
         </span>
@@ -61,7 +59,6 @@
         </div>
         <span class="rp-bar-percent">{{ displayedReward.progress }}%</span>
       </div>
-      <p v-if="!displayedReward.claimed" class="rp-hint">达成后揭晓奖励 ✨</p>
     </div>
 
     <div class="card calendar-card">
@@ -99,7 +96,7 @@
             🏆 体重变化奖励达成！
           </template>
           <template v-else-if="activeReward.condition_type === 'target_weight'">
-            🎁 神秘奖励已解锁！
+            🎁 奖励已解锁！
           </template>
           <template v-else>
             恭喜！目标达成！
