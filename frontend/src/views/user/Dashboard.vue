@@ -41,6 +41,42 @@
       </div>
     </div>
 
+    <div v-if="rewardProgress.length > 0" class="card reward-progress-card">
+      <div
+        v-for="rp in rewardProgress"
+        :key="rp.rule_id"
+        class="reward-progress-item"
+      >
+        <div class="rp-header">
+          <span class="rp-icon">🎁</span>
+          <div class="rp-title-wrap">
+            <p class="rp-title">神秘奖励挑战</p>
+            <p class="rp-subtitle">{{ rp.claimed ? '奖励已解锁' : '达成目标体重即可解锁神秘奖励' }}</p>
+          </div>
+          <span v-if="rp.claimed" class="rp-tag rp-tag-done">已解锁</span>
+          <span v-else class="rp-tag rp-tag-progress">进行中</span>
+        </div>
+        <div class="rp-bar-wrap">
+          <div class="rp-bar">
+            <div class="rp-bar-fill" :style="{ width: rp.progress + '%' }"></div>
+          </div>
+          <span class="rp-bar-percent">{{ rp.progress }}%</span>
+        </div>
+        <div class="rp-stats">
+          <span v-if="rp.current_weight !== null" class="rp-stat">
+            当前 <strong>{{ rp.current_weight }}</strong>kg
+          </span>
+          <span class="rp-stat rp-stat-target">
+            目标 <strong>{{ rp.target_weight }}</strong>kg
+          </span>
+          <span v-if="!rp.claimed && rp.remaining !== null" class="rp-stat rp-stat-remain">
+            还差 <strong>{{ rp.remaining }}</strong>kg
+          </span>
+        </div>
+        <p v-if="!rp.claimed" class="rp-hint">奖励内容将在达成后揭晓 ✨</p>
+      </div>
+    </div>
+
     <div class="card calendar-card">
       <div class="calendar-header">
         <button class="nav-btn" @click="prevMonth">‹</button>
@@ -75,6 +111,9 @@
           <template v-if="activeReward.condition_type === 'weight_change'">
             🏆 体重变化奖励达成！
           </template>
+          <template v-else-if="activeReward.condition_type === 'target_weight'">
+            🎁 神秘奖励已解锁！
+          </template>
           <template v-else>
             恭喜！目标达成！
           </template>
@@ -85,7 +124,7 @@
             当前体重 <strong>{{ activeReward.weight_value }}kg</strong>
           </template>
           <template v-else>
-            你当前的体重 <strong>{{ activeReward.weight_value }}kg</strong> 
+            你当前的体重 <strong>{{ activeReward.weight_value }}kg</strong>
             已达到目标 <strong>{{ activeReward.target_weight }}kg</strong>！
           </template>
         </p>
@@ -122,6 +161,8 @@ const saving = ref(false)
 
 const showRewardModal = ref(false)
 const activeReward = ref({})
+
+const rewardProgress = ref([])
 
 const userProfile = ref({})
 
@@ -271,6 +312,7 @@ const handleQuickRecord = async () => {
     quickSuccess.value = '记录成功！'
     quickWeight.value = ''
     await fetchData()
+    await fetchRewardProgress()
 
     if (res.rewards && res.rewards.length > 0) {
       activeReward.value = res.rewards[0]
@@ -312,13 +354,26 @@ const fetchData = async () => {
 
 watch([viewYear, viewMonth], fetchData)
 
-onMounted(fetchData)
+const fetchRewardProgress = async () => {
+  try {
+    const res = await request.get('/rewards/progress')
+    rewardProgress.value = res || []
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+onMounted(() => {
+  fetchData()
+  fetchRewardProgress()
+})
 
 const closeRewardModal = async () => {
   showRewardModal.value = false
   if (activeReward.value.id) {
     try {
       await request.put(`/rewards/${activeReward.value.id}/read`)
+      await fetchRewardProgress()
     } catch (err) {
       console.error(err)
     }
@@ -477,6 +532,121 @@ const getImageUrl = (path) => {
   padding: var(--spacing-md);
 }
 
+.reward-progress-card {
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  background: linear-gradient(135deg, #fffaf0, #fff3e0);
+}
+
+.reward-progress-item + .reward-progress-item {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px dashed rgba(255, 152, 0, 0.25);
+}
+
+.rp-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.rp-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.rp-title-wrap {
+  flex: 1;
+}
+
+.rp-title {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.rp-subtitle {
+  font-size: var(--font-size-xs);
+  color: var(--text-light);
+  margin: 2px 0 0;
+}
+
+.rp-tag {
+  font-size: var(--font-size-xs);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.rp-tag-progress {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.rp-tag-done {
+  background: #d4edda;
+  color: #155724;
+}
+
+.rp-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.rp-bar {
+  flex: 1;
+  height: 12px;
+  background: #ffe0b2;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.rp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff9800, #ff5722);
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+
+.rp-bar-percent {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: #e65100;
+  min-width: 42px;
+  text-align: right;
+}
+
+.rp-stats {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.rp-stat strong {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.rp-stat-target strong {
+  color: #e65100;
+}
+
+.rp-stat-remain strong {
+  color: var(--color-secondary);
+}
+
+.rp-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-light);
+  margin: 6px 0 0;
+}
+
 .calendar-header {
   display: flex;
   align-items: center;
@@ -584,6 +754,8 @@ const getImageUrl = (path) => {
   .calendar-day { min-height: 40px; }
   .day-num { font-size: 11px; }
   .day-weight { font-size: 10px; }
+  .reward-progress-card { padding: var(--spacing-sm) var(--spacing-md); }
+  .rp-stats { gap: var(--spacing-sm); }
 }
 
 .reward-modal-content {

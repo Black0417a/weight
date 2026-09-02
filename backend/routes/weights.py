@@ -60,6 +60,54 @@ def check_goal_achievement(user_id, current_weight):
     return [r.to_dict() for r in rewards] if rewards else None
 
 
+def check_target_weight(user_id, current_weight):
+    """管理员设置目标体重的奖励：当用户当前体重 <= 目标体重时发放奖励"""
+    active_rules = RewardRule.query.filter_by(
+        condition_type='target_weight',
+        is_active=True
+    ).all()
+
+    rewards = []
+    for rule in active_rules:
+        target_users = json.loads(rule.target_users) if rule.target_users else 'all'
+        if target_users != 'all':
+            if str(user_id) not in [str(u) for u in target_users]:
+                continue
+
+        params = json.loads(rule.condition_params) if rule.condition_params else {}
+        target_weight = float(params.get('target_weight', 0))
+        if target_weight <= 0:
+            continue
+
+        if current_weight > target_weight:
+            continue
+
+        existing = UserReward.query.filter_by(
+            user_id=user_id,
+            rule_id=rule.id
+        ).first()
+        if existing:
+            continue
+
+        reward = UserReward(
+            user_id=user_id,
+            rule_id=rule.id,
+            reward_type=rule.reward_type,
+            reward_content=rule.reward_content,
+            reward_image=rule.reward_image,
+            weight_value=current_weight,
+            target_weight=target_weight,
+            is_read=False
+        )
+        db.session.add(reward)
+        rewards.append(reward)
+
+    if rewards:
+        db.session.flush()
+
+    return [r.to_dict() for r in rewards] if rewards else None
+
+
 def check_weight_change(user_id, current_weight, record_date):
     active_rules = RewardRule.query.filter_by(
         condition_type='weight_change',
@@ -170,8 +218,9 @@ def create_weight():
         existing.weight = weight
         db.session.commit()
         goal_rewards = check_goal_achievement(user_id, weight)
+        target_rewards = check_target_weight(user_id, weight)
         change_rewards = check_weight_change(user_id, weight, record_date)
-        combined = (goal_rewards or []) + (change_rewards or [])
+        combined = (goal_rewards or []) + (target_rewards or []) + (change_rewards or [])
         db.session.commit()
         return jsonify({
             'message': '体重记录已更新',
@@ -183,8 +232,9 @@ def create_weight():
     db.session.add(record)
     db.session.commit()
     goal_rewards = check_goal_achievement(user_id, weight)
+    target_rewards = check_target_weight(user_id, weight)
     change_rewards = check_weight_change(user_id, weight, record_date)
-    combined = (goal_rewards or []) + (change_rewards or [])
+    combined = (goal_rewards or []) + (target_rewards or []) + (change_rewards or [])
     db.session.commit()
     return jsonify({
         'message': '体重记录已保存',
@@ -250,6 +300,71 @@ def get_rewards():
     user_id = int(get_jwt_identity())
     rewards = UserReward.query.filter_by(user_id=user_id).order_by(UserReward.created_at.desc()).all()
     return jsonify([r.to_dict() for r in rewards]), 200
+
+
+@weights_bp.route('/rewards/progress', methods=['GET'])
+@jwt_required()
+def get_reward_progress():
+    """返回用户可见的目标体重奖励进度（不暴露奖励内容）"""
+    user_id = int(get_jwt_identity())
+
+    active_rules = RewardRule.query.filter_by(
+        condition_type='target_weight',
+        is_active=True
+    ).order_by(RewardRule.created_at.desc()).all()
+
+    if not active_rules:
+        return jsonify([]), 200
+
+    latest_record = WeightRecord.query.filter_by(user_id=user_id) \
+        .order_by(WeightRecord.record_date.desc()).first()
+    first_record = WeightRecord.query.filter_by(user_id=user_id) \
+        .order_by(WeightRecord.record_date.asc()).first()
+
+    current_weight = latest_record.weight if latest_record else None
+    start_weight = first_record.weight if first_record else None
+
+    progress_list = []
+    for rule in active_rules:
+        target_users = json.loads(rule.target_users) if rule.target_users else 'all'
+        if target_users != 'all':
+            if str(user_id) not in [str(u) for u in target_users]:
+                continue
+
+        params = json.loads(rule.condition_params) if rule.condition_params else {}
+        target_weight = float(params.get('target_weight', 0))
+        if target_weight <= 0:
+            continue
+
+        claimed = UserReward.query.filter_by(
+            user_id=user_id,
+            rule_id=rule.id
+        ).first() is not None
+
+        progress = 0
+        if current_weight is not None:
+            if current_weight <= target_weight:
+                progress = 100
+            elif start_weight is not None and start_weight > target_weight:
+                progress = (start_weight - current_weight) / (start_weight - target_weight) * 100
+                progress = max(0, min(100, progress))
+
+        remaining = None
+        if current_weight is not None and current_weight > target_weight:
+            remaining = round(current_weight - target_weight, 1)
+
+        progress_list.append({
+            'rule_id': rule.id,
+            'name': rule.name,
+            'target_weight': target_weight,
+            'current_weight': current_weight,
+            'start_weight': start_weight,
+            'progress': round(progress, 1),
+            'remaining': remaining,
+            'claimed': claimed
+        })
+
+    return jsonify(progress_list), 200
 
 
 @weights_bp.route('/rewards/unread-count', methods=['GET'])

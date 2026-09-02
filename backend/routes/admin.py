@@ -225,6 +225,11 @@ def create_reward_rule():
         if not data.get(field):
             return jsonify({'error': f'{field}不能为空'}), 400
 
+    if data['condition_type'] == 'target_weight':
+        tw = data['condition_params'].get('target_weight') if isinstance(data.get('condition_params'), dict) else None
+        if not tw or float(tw) <= 0:
+            return jsonify({'error': '目标体重奖励需要设置大于0的目标体重'}), 400
+
     rule = RewardRule(
         name=data['name'],
         condition_type=data['condition_type'],

@@ -23,7 +23,7 @@
         <tbody>
           <tr v-for="r in rules" :key="r.id">
             <td data-label="名称">{{ r.name }}</td>
-            <td data-label="条件类型">{{ r.condition_type === 'weight_change' ? '体重变化' : '目标达成' }}</td>
+            <td data-label="条件类型">{{ formatConditionType(r.condition_type) }}</td>
             <td data-label="发放模式">{{ r.grant_mode === 'auto' ? '自动' : '手动' }}</td>
             <td data-label="目标用户">{{ formatTargetUsers(r.target_users) }}</td>
             <td data-label="状态"><span :class="r.is_active ? 'tag-active' : 'tag-inactive'">{{ r.is_active ? '启用' : '禁用' }}</span></td>
@@ -49,9 +49,15 @@
         <div class="form-group">
           <label>条件类型</label>
           <select v-model="form.condition_type" class="input-field">
+            <option value="target_weight">目标体重达成</option>
             <option value="weight_change">体重变化幅度</option>
             <option value="goal_achievement">目标达成率</option>
           </select>
+        </div>
+        <div class="form-group" v-if="form.condition_type === 'target_weight'">
+          <label>目标体重 (kg)</label>
+          <input v-model.number="form.condition_params.target_weight" type="number" step="0.1" class="input-field" placeholder="如 65" />
+          <p class="form-hint">用户体重达到此值即可领取奖励，奖励内容对用户隐藏直至达成</p>
         </div>
         <div class="form-group" v-if="form.condition_type === 'weight_change'">
           <label>减重阈值 (天数)</label>
@@ -145,8 +151,8 @@ const allSelected = ref(true)
 
 const defaultForm = () => ({
   name: '',
-  condition_type: 'weight_change',
-  condition_params: { days: 7, weight_kg: 2 },
+  condition_type: 'target_weight',
+  condition_params: { target_weight: 65 },
   reward_type: 'text',
   reward_content: '',
   reward_image: null,
@@ -155,6 +161,15 @@ const defaultForm = () => ({
 })
 
 const form = ref(defaultForm())
+
+const formatConditionType = (type) => {
+  const map = {
+    target_weight: '目标体重达成',
+    weight_change: '体重变化',
+    goal_achievement: '目标达成'
+  }
+  return map[type] || type
+}
 
 const formatTargetUsers = (target) => {
   if (!target || target === 'all') return '全部用户'
@@ -325,6 +340,8 @@ onMounted(() => {
 }
 
 .error-msg { color: var(--color-danger); font-size: var(--font-size-xs); margin-bottom: var(--spacing-sm); }
+
+.form-hint { color: var(--text-light); font-size: var(--font-size-xs); margin-top: 6px; line-height: 1.5; }
 
 .user-select-box {
   border: 2px solid #ffe0e0;
