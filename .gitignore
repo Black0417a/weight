@@ -1,3 +1,28 @@
+# 原有忽略规则
 /.trae/
 /frontend/package-lock.json
 /backend/venv/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# Node 依赖与前端构建产物
+node_modules/
+frontend/dist/
+
+# 数据库（含用户数据，禁止提交）
+backend/instance/
+*.db
+
+# IDE 配置
+.idea/
+.vscode/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
