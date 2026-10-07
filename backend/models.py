@@ -170,6 +170,25 @@ class UserReward(db.Model):
         }
 
 
+class RedPacketRecord(db.Model):
+    __tablename__ = 'red_packet_records'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    streak_start = db.Column(db.Date, nullable=False)
+    streak_end = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime, default=get_beijing_time)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'amount': self.amount,
+            'streak_start': self.streak_start.isoformat() if self.streak_start else None,
+            'streak_end': self.streak_end.isoformat() if self.streak_end else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
 class SystemConfig(db.Model):
     __tablename__ = 'system_configs'
     id = db.Column(db.Integer, primary_key=True)

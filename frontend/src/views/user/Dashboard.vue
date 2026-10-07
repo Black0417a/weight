@@ -20,6 +20,22 @@
       </div>
       <router-link v-else to="/goal" class="set-goal-link">设置目标体重 →</router-link>
 
+      <div class="today-packet-row">
+        <template v-if="redPacket.can_draw">
+          <span class="packet-hint-text packet-hint-ready">🧨 连续打卡 {{ redPacket.streak_required }} 天达成！</span>
+          <button class="packet-draw-mini" :disabled="drawing" @click="handleDraw">
+            {{ drawing ? '抽取中...' : '抽取红包' }}
+          </button>
+        </template>
+        <span v-else class="packet-hint-text">🧧 还差 {{ redPacket.remaining_days }} 天可领随机红包</span>
+        <a
+          v-if="redPacket.total_drawn > 0"
+          href="javascript:;"
+          class="packet-history-mini"
+          @click="openPacketHistory"
+        >我的红包({{ redPacket.total_drawn }})</a>
+      </div>
+
       <div class="quick-record">
         <div class="quick-input-row">
           <input
@@ -123,6 +139,35 @@
         </button>
       </div>
     </div>
+
+    <div v-if="showPacketModal" class="modal-overlay" @click.self="closePacketModal">
+      <div class="packet-modal">
+        <div class="packet-modal-icon">🧧</div>
+        <p class="packet-modal-label">恭喜获得随机红包</p>
+        <div class="packet-amount">¥ {{ formatAmount(drawnPacket.amount) }}</div>
+        <div class="packet-modal-info">
+          <p>账号：{{ drawnPacket.email }}</p>
+          <p>时间：{{ drawnPacket.created_at }}</p>
+        </div>
+        <p class="packet-modal-hint">📸 截图保存此页面，凭截图兑换红包</p>
+        <button class="btn packet-modal-btn" @click="closePacketModal">好的</button>
+      </div>
+    </div>
+
+    <div v-if="showPacketHistory" class="modal-overlay" @click.self="showPacketHistory = false">
+      <div class="packet-modal packet-history-modal">
+        <h3 class="packet-history-title">🧧 我的红包</h3>
+        <div v-if="packetHistory.length === 0" class="packet-history-empty">暂无红包记录</div>
+        <div v-else class="packet-history-list">
+          <div v-for="p in packetHistory" :key="p.id" class="packet-history-item">
+            <span class="packet-history-amount">¥ {{ formatAmount(p.amount) }}</span>
+            <span class="packet-history-date">{{ p.drawn_at }}</span>
+          </div>
+        </div>
+        <p class="packet-modal-hint">📸 截图可兑换红包</p>
+        <button class="btn packet-modal-btn" @click="showPacketHistory = false">关闭</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -145,6 +190,59 @@ const saving = ref(false)
 
 const showRewardModal = ref(false)
 const activeReward = ref({})
+
+const redPacket = ref({ streak: 0, streak_required: 7, remaining_days: 7, can_draw: false, total_drawn: 0 })
+const drawing = ref(false)
+const showPacketModal = ref(false)
+const showPacketHistory = ref(false)
+const drawnPacket = ref({})
+const packetHistory = ref([])
+
+const formatAmount = (val) => {
+  const n = parseFloat(val)
+  return isNaN(n) ? '0.00' : n.toFixed(2)
+}
+
+const fetchRedPacketStatus = async () => {
+  try {
+    const res = await request.get('/redpacket/status')
+    redPacket.value = res
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const handleDraw = async () => {
+  if (drawing.value) return
+  drawing.value = true
+  try {
+    const res = await request.post('/redpacket/draw')
+    drawnPacket.value = res
+    showPacketModal.value = true
+    await fetchRedPacketStatus()
+  } catch (err) {
+    alert(err.response?.data?.error || '抽取失败，请稍后再试')
+    await fetchRedPacketStatus()
+  } finally {
+    drawing.value = false
+  }
+}
+
+const closePacketModal = () => {
+  showPacketModal.value = false
+  drawnPacket.value = {}
+}
+
+const openPacketHistory = async () => {
+  showPacketHistory.value = true
+  try {
+    const res = await request.get('/redpacket/history')
+    packetHistory.value = res || []
+  } catch (err) {
+    packetHistory.value = []
+    console.error(err)
+  }
+}
 
 const rewardProgress = ref([])
 
@@ -308,6 +406,7 @@ const handleQuickRecord = async () => {
     quickWeight.value = ''
     await fetchData()
     await fetchRewardProgress()
+    await fetchRedPacketStatus()
 
     if (res.rewards && res.rewards.length > 0) {
       activeReward.value = res.rewards[0]
@@ -361,6 +460,7 @@ const fetchRewardProgress = async () => {
 onMounted(() => {
   fetchData()
   fetchRewardProgress()
+  fetchRedPacketStatus()
 })
 
 const closeRewardModal = async () => {
@@ -525,6 +625,164 @@ const getImageUrl = (path) => {
 
 .calendar-card {
   padding: var(--spacing-md);
+}
+
+.today-packet-row {
+  margin-top: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.packet-hint-text {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.packet-hint-ready {
+  color: #e65100;
+  font-weight: 600;
+}
+
+.packet-draw-mini {
+  background: linear-gradient(135deg, #ff9800, #ff5722);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 3px 14px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.packet-draw-mini:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.packet-history-mini {
+  font-size: var(--font-size-xs);
+  color: #e65100;
+  text-decoration: none;
+}
+
+.packet-history-mini:hover {
+  text-decoration: underline;
+}
+
+.packet-modal {
+  background: linear-gradient(160deg, #ff5757, #e63333);
+  border-radius: 24px;
+  padding: 36px 28px 28px;
+  text-align: center;
+  width: 90%;
+  max-width: 380px;
+  box-shadow: 0 20px 60px rgba(230, 51, 51, 0.35);
+  animation: rewardPop 0.4s ease;
+}
+
+.packet-modal-icon {
+  font-size: 56px;
+  margin-bottom: 8px;
+  animation: packetShake 1.2s ease-in-out infinite;
+}
+
+@keyframes packetShake {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(8deg); }
+}
+
+.packet-modal-label {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.packet-amount {
+  font-size: 52px;
+  font-weight: 800;
+  color: #ffe24d;
+  line-height: 1.1;
+  margin-bottom: 14px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.packet-modal-info {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.packet-modal-info p {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 13px;
+  margin: 2px 0;
+  word-break: break-all;
+}
+
+.packet-modal-hint {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+.packet-modal-btn {
+  background: #ffe24d;
+  color: #d32f2f;
+  padding: 12px 44px;
+  border-radius: 24px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.packet-history-modal {
+  max-width: 380px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.packet-history-title {
+  color: white;
+  font-size: 20px;
+  margin-bottom: 16px;
+}
+
+.packet-history-empty {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.packet-history-list {
+  max-height: 260px;
+  overflow-y: auto;
+  margin-bottom: 14px;
+}
+
+.packet-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+
+.packet-history-amount {
+  color: #ffe24d;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.packet-history-date {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
 }
 
 .reward-progress-card {
@@ -729,6 +987,8 @@ const getImageUrl = (path) => {
   .day-weight { font-size: 10px; }
   .reward-progress-card { padding: 8px 12px; margin-bottom: var(--spacing-sm); }
   .rp-top { gap: 6px; margin-bottom: 6px; }
+  .packet-amount { font-size: 42px; }
+  .packet-modal { padding: 28px 20px 22px; }
 }
 
 .reward-modal-content {

@@ -31,12 +31,14 @@ def create_app():
     from routes.goal import goal_bp
     from routes.admin import admin_bp
     from routes.reminder import reminder_bp
+    from routes.redpacket import redpacket_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(weights_bp, url_prefix='/api')
     app.register_blueprint(goal_bp, url_prefix='/api')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(reminder_bp, url_prefix='/api')
+    app.register_blueprint(redpacket_bp, url_prefix='/api')
 
     with app.app_context():
         from models import User, WeightRecord, UserGoal, Admin, RewardRule, UserReward, SystemConfig, UserReminderSetting
